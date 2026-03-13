@@ -1,0 +1,1520 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UniConnect — Your Campus Ecosystem</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --primary: #6C63FF;
+    --primary-dark: #4B44CC;
+    --primary-light: #A89DFF;
+    --accent: #38BDF8;
+    --accent2: #A855F7;
+    --dark: #09090F;
+    --dark2: #0F0F1A;
+    --dark3: #161628;
+    --card: #12121F;
+    --card2: #1A1A30;
+    --text: #EEF0FF;
+    --text-muted: #7B82A8;
+    --text-dim: #3D4170;
+    --border: rgba(108,99,255,0.18);
+    --border-hover: rgba(108,99,255,0.45);
+    --glow: 0 0 30px rgba(108,99,255,0.25);
+    --glow-strong: 0 0 60px rgba(108,99,255,0.4);
+    --shadow: 0 8px 32px rgba(0,0,0,0.5);
+    --radius: 16px;
+    --radius-sm: 10px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--dark);
+    color: var(--text);
+    overflow-x: hidden;
+    line-height: 1.6;
+  }
+
+  /* ─── SCROLLBAR ─── */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: var(--dark2); }
+  ::-webkit-scrollbar-thumb { background: var(--primary-dark); border-radius: 3px; }
+
+  /* ─── NAV ─── */
+  nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 1rem 2rem;
+    background: rgba(10,15,13,0.85);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--border);
+    transition: all 0.3s;
+  }
+
+  .nav-logo {
+    font-family: 'Syne', sans-serif;
+    font-size: 1.5rem; font-weight: 800;
+    color: var(--primary);
+    display: flex; align-items: center; gap: 0.5rem;
+    text-decoration: none;
+  }
+  .nav-logo span { color: var(--text); }
+
+  .nav-links {
+    display: flex; align-items: center; gap: 0.25rem;
+    list-style: none;
+  }
+  .nav-links a {
+    color: var(--text-muted);
+    text-decoration: none;
+    font-size: 0.9rem; font-weight: 500;
+    padding: 0.5rem 0.85rem;
+    border-radius: 8px;
+    transition: all 0.2s;
+  }
+  .nav-links a:hover { color: var(--primary); background: rgba(108,99,255,0.08); }
+
+  .nav-cta {
+    display: flex; gap: 0.75rem; align-items: center;
+  }
+
+  .btn {
+    display: inline-flex; align-items: center; gap: 0.4rem;
+    padding: 0.6rem 1.4rem; border-radius: 10px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.9rem; font-weight: 500;
+    cursor: pointer; border: none;
+    text-decoration: none; transition: all 0.25s;
+  }
+  .btn-outline {
+    background: transparent;
+    border: 1.5px solid var(--border-hover);
+    color: var(--text);
+  }
+  .btn-outline:hover { border-color: var(--primary); color: var(--primary); }
+  .btn-primary {
+    background: var(--primary);
+    color: #000;
+    font-weight: 600;
+    box-shadow: 0 4px 20px rgba(108,99,255,0.35);
+  }
+  .btn-primary:hover {
+    background: #A89DFF;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 30px rgba(108,99,255,0.4);
+  }
+  .btn-accent {
+    background: linear-gradient(135deg, #38BDF8, #A855F7);
+    color: #fff; font-weight: 600;
+    box-shadow: 0 4px 20px rgba(56,189,248,0.3);
+  }
+  .btn-accent:hover { filter: brightness(1.1); transform: translateY(-1px); }
+  .btn-lg { padding: 0.85rem 2rem; font-size: 1rem; border-radius: 12px; }
+
+  /* ─── HAMBURGER ─── */
+  .hamburger {
+    display: none; flex-direction: column; gap: 5px;
+    cursor: pointer; padding: 8px; background: none; border: none;
+  }
+  .hamburger span {
+    width: 24px; height: 2px;
+    background: var(--text); display: block;
+    border-radius: 2px; transition: all 0.3s;
+  }
+
+  /* ─── HERO ─── */
+  .hero {
+    min-height: 100vh;
+    display: flex; align-items: center;
+    padding: 7rem 2rem 4rem;
+    position: relative; overflow: hidden;
+  }
+
+  .hero-bg {
+    position: absolute; inset: 0; z-index: 0;
+    background:
+      radial-gradient(ellipse 80% 60% at 60% 40%, rgba(108,99,255,0.12) 0%, transparent 70%),
+      radial-gradient(ellipse 50% 40% at 10% 80%, rgba(168,85,247,0.08) 0%, transparent 60%),
+      radial-gradient(ellipse 40% 30% at 90% 10%, rgba(56,189,248,0.07) 0%, transparent 60%);
+  }
+
+  .hero-grid {
+    position: absolute; inset: 0;
+    background-image:
+      linear-gradient(rgba(108,99,255,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(108,99,255,0.04) 1px, transparent 1px);
+    background-size: 60px 60px;
+    mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, black 30%, transparent 100%);
+  }
+
+  .hero-content {
+    max-width: 1200px; margin: 0 auto;
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 4rem; align-items: center;
+    position: relative; z-index: 1; width: 100%;
+  }
+
+  .hero-badge {
+    display: inline-flex; align-items: center; gap: 0.5rem;
+    background: rgba(108,99,255,0.12);
+    border: 1px solid var(--border);
+    padding: 0.35rem 1rem; border-radius: 100px;
+    font-size: 0.8rem; font-weight: 500; color: var(--primary);
+    margin-bottom: 1.5rem;
+    animation: fadeUp 0.6s ease both;
+  }
+  .hero-badge .dot {
+    width: 6px; height: 6px;
+    background: linear-gradient(135deg, #6C63FF, #A855F7); border-radius: 50%;
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(1.3); }
+  }
+
+  h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(2.4rem, 5vw, 3.6rem);
+    font-weight: 800; line-height: 1.1;
+    margin-bottom: 1.25rem;
+    animation: fadeUp 0.6s 0.1s ease both;
+  }
+  h1 .highlight {
+    color: var(--primary);
+    position: relative;
+  }
+  h1 .highlight::after {
+    content: '';
+    position: absolute; left: 0; right: 0; bottom: 2px; height: 3px;
+    background: var(--primary); opacity: 0.4; border-radius: 2px;
+  }
+
+  .hero-desc {
+    color: var(--text-muted); font-size: 1.05rem;
+    max-width: 480px; margin-bottom: 2rem;
+    animation: fadeUp 0.6s 0.2s ease both;
+  }
+
+  .hero-actions {
+    display: flex; gap: 1rem; flex-wrap: wrap;
+    animation: fadeUp 0.6s 0.3s ease both;
+  }
+
+  .hero-stats {
+    display: flex; gap: 2rem; margin-top: 2.5rem;
+    animation: fadeUp 0.6s 0.4s ease both;
+  }
+  .stat-item { }
+  .stat-num {
+    font-family: 'Syne', sans-serif;
+    font-size: 1.8rem; font-weight: 800; color: var(--primary);
+    line-height: 1;
+  }
+  .stat-label { font-size: 0.78rem; color: var(--text-muted); }
+
+  /* ─── HERO VISUAL ─── */
+  .hero-visual {
+    position: relative;
+    animation: fadeUp 0.8s 0.2s ease both;
+  }
+
+  .phone-mockup {
+    background: var(--card);
+    border: 1.5px solid var(--border);
+    border-radius: 28px;
+    overflow: hidden;
+    box-shadow: var(--shadow), var(--glow);
+    max-width: 300px; margin: 0 auto;
+    position: relative;
+  }
+  .phone-notch {
+    width: 100px; height: 20px;
+    background: var(--dark);
+    margin: 0 auto;
+    border-radius: 0 0 14px 14px;
+  }
+  .phone-screen { padding: 1rem; }
+  .app-header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 1rem;
+  }
+  .app-logo-sm {
+    font-family: 'Syne', sans-serif;
+    font-size: 0.9rem; font-weight: 800; color: var(--primary);
+  }
+  .app-avatar {
+    width: 28px; height: 28px;
+    background: linear-gradient(135deg, #6C63FF, #A855F7);
+    border-radius: 50%;
+  }
+
+  .search-bar-mock {
+    background: var(--dark3);
+    border: 1px solid var(--border);
+    border-radius: 10px; padding: 0.6rem 0.8rem;
+    display: flex; align-items: center; gap: 0.5rem;
+    margin-bottom: 1rem; font-size: 0.75rem; color: var(--text-muted);
+  }
+  .search-bar-mock svg { opacity: 0.5; }
+
+  .category-chips {
+    display: flex; gap: 0.4rem; overflow-x: auto; margin-bottom: 1rem;
+    padding-bottom: 4px;
+  }
+  .chip {
+    flex-shrink: 0;
+    padding: 0.3rem 0.7rem;
+    border-radius: 100px; font-size: 0.7rem; font-weight: 500;
+    cursor: pointer;
+  }
+  .chip-active { background: var(--primary); color: #000; }
+  .chip-inactive { background: var(--dark3); color: var(--text-muted); border: 1px solid var(--border); }
+
+  .listing-cards-mock { display: flex; flex-direction: column; gap: 0.6rem; }
+  .listing-card-mock {
+    background: var(--dark3);
+    border: 1px solid var(--border);
+    border-radius: 10px; padding: 0.7rem;
+    display: flex; gap: 0.6rem; align-items: center;
+  }
+  .listing-icon {
+    width: 36px; height: 36px; border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.2rem; flex-shrink: 0;
+  }
+  .listing-info { flex: 1; min-width: 0; }
+  .listing-name { font-size: 0.75rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .listing-meta { font-size: 0.65rem; color: var(--text-muted); }
+  .listing-badge {
+    font-size: 0.6rem; padding: 0.15rem 0.4rem;
+    border-radius: 4px; font-weight: 600; flex-shrink: 0;
+  }
+  .badge-open { background: rgba(108,99,255,0.18); color: var(--primary); }
+  .badge-delivery { background: rgba(56,189,248,0.15); color: var(--accent); }
+
+  .floating-card {
+    position: absolute;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px; padding: 0.75rem 1rem;
+    box-shadow: var(--shadow);
+    animation: float 4s ease-in-out infinite;
+  }
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+  }
+  .float-1 { top: 20%; right: -15%; animation-delay: 0s; }
+  .float-2 { bottom: 20%; left: -15%; animation-delay: 2s; }
+  .float-label { font-size: 0.7rem; color: var(--text-muted); margin-bottom: 0.2rem; }
+  .float-value { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 1rem; color: var(--primary); }
+
+  /* ─── SECTIONS ─── */
+  section { padding: 5rem 2rem; }
+  .section-inner { max-width: 1200px; margin: 0 auto; }
+  .section-tag {
+    display: inline-flex; align-items: center; gap: 0.4rem;
+    color: var(--primary); font-size: 0.8rem; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.1em;
+    margin-bottom: 0.75rem;
+  }
+  .section-tag::before {
+    content: ''; display: block;
+    width: 20px; height: 2px; background: var(--primary); border-radius: 1px;
+  }
+  h2 {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(1.8rem, 3.5vw, 2.6rem);
+    font-weight: 800; line-height: 1.15;
+    margin-bottom: 1rem;
+  }
+  h2 em { font-style: normal; color: var(--primary); }
+  .section-desc {
+    color: var(--text-muted); font-size: 1rem;
+    max-width: 520px; line-height: 1.7;
+  }
+
+  /* ─── FEATURES / SERVICES ─── */
+  .services-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.25rem; margin-top: 3rem;
+  }
+
+  .service-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 1.75rem;
+    transition: all 0.3s; cursor: pointer; position: relative; overflow: hidden;
+  }
+  .service-card::before {
+    content: ''; position: absolute; inset: 0;
+    background: radial-gradient(ellipse 80% 60% at 50% 0%, rgba(108,99,255,0.06), transparent 70%);
+    opacity: 0; transition: opacity 0.3s;
+  }
+  .service-card:hover { border-color: var(--border-hover); transform: translateY(-4px); box-shadow: var(--glow); }
+  .service-card:hover::before { opacity: 1; }
+
+  .service-icon {
+    width: 52px; height: 52px; border-radius: 14px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.6rem; margin-bottom: 1.25rem;
+  }
+  .icon-green { background: rgba(108,99,255,0.18); }
+  .icon-orange { background: rgba(56,189,248,0.15); }
+  .icon-blue { background: rgba(168,85,247,0.18); }
+  .icon-purple { background: rgba(168,85,247,0.2); }
+  .icon-yellow { background: rgba(108,99,255,0.15); }
+  .icon-teal { background: rgba(56,189,248,0.18); }
+
+  .service-card h3 {
+    font-family: 'Syne', sans-serif;
+    font-size: 1.1rem; font-weight: 700; margin-bottom: 0.5rem;
+  }
+  .service-card p { font-size: 0.88rem; color: var(--text-muted); line-height: 1.6; }
+
+  .service-card .card-link {
+    display: inline-flex; align-items: center; gap: 0.3rem;
+    margin-top: 1rem; font-size: 0.82rem; font-weight: 600;
+    color: var(--primary); text-decoration: none;
+    transition: gap 0.2s;
+  }
+  .service-card:hover .card-link { gap: 0.6rem; }
+
+  /* ─── HOW IT WORKS ─── */
+  .how-section { background: var(--dark2); }
+  .how-header { display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 2rem; margin-bottom: 3.5rem; }
+
+  .steps-container { position: relative; }
+  .steps-line {
+    position: absolute; top: 40px; left: 40px; right: 40px; height: 2px;
+    background: linear-gradient(90deg, var(--primary), var(--accent2), var(--accent));
+    opacity: 0.3;
+  }
+  .steps-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 2rem; position: relative; z-index: 1;
+  }
+  .step {
+    display: flex; flex-direction: column; align-items: center; text-align: center;
+  }
+  .step-num {
+    width: 56px; height: 56px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Syne', sans-serif; font-size: 1.2rem; font-weight: 800;
+    margin-bottom: 1rem; border: 2px solid var(--border);
+    background: var(--card); position: relative;
+  }
+  .step:nth-child(1) .step-num { border-color: var(--primary); color: var(--primary); box-shadow: 0 0 20px rgba(108,99,255,0.2); }
+  .step:nth-child(2) .step-num { border-color: var(--accent2); color: var(--accent2); box-shadow: 0 0 20px rgba(56,189,248,0.2); }
+  .step:nth-child(3) .step-num { border-color: var(--accent); color: var(--accent); box-shadow: 0 0 20px rgba(56,189,248,0.2); }
+  .step:nth-child(4) .step-num { border-color: #A855F7; color: #A855F7; box-shadow: 0 0 20px rgba(168,85,247,0.2); }
+  .step h3 { font-family: 'Syne', sans-serif; font-size: 1rem; font-weight: 700; margin-bottom: 0.4rem; }
+  .step p { font-size: 0.82rem; color: var(--text-muted); line-height: 1.6; }
+
+  /* ─── LISTINGS ─── */
+  .tabs {
+    display: flex; gap: 0.5rem; flex-wrap: wrap;
+    margin-bottom: 2.5rem;
+  }
+  .tab {
+    padding: 0.5rem 1.1rem; border-radius: 8px;
+    font-size: 0.85rem; font-weight: 500;
+    cursor: pointer; border: 1.5px solid var(--border);
+    background: transparent; color: var(--text-muted);
+    transition: all 0.2s;
+  }
+  .tab.active, .tab:hover {
+    background: var(--primary); color: #000;
+    border-color: var(--primary); font-weight: 600;
+  }
+
+  .listings-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 1.25rem;
+  }
+
+  .listing-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius); overflow: hidden;
+    transition: all 0.3s; cursor: pointer;
+  }
+  .listing-card:hover { border-color: var(--border-hover); transform: translateY(-4px); box-shadow: var(--glow); }
+
+  .listing-img {
+    height: 140px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 3rem; position: relative;
+  }
+  .listing-img .status-pill {
+    position: absolute; top: 10px; right: 10px;
+    padding: 0.2rem 0.6rem; border-radius: 100px; font-size: 0.68rem; font-weight: 600;
+  }
+  .listing-body { padding: 1rem 1.1rem; }
+  .listing-body h4 { font-family: 'Syne', sans-serif; font-size: 0.95rem; font-weight: 700; margin-bottom: 0.2rem; }
+  .listing-body .listing-sub { font-size: 0.78rem; color: var(--text-muted); margin-bottom: 0.75rem; }
+  .listing-meta-row {
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .rating { display: flex; align-items: center; gap: 0.25rem; font-size: 0.78rem; color: #FFD600; }
+  .distance { font-size: 0.72rem; color: var(--text-muted); }
+
+  /* ─── BODA SECTION ─── */
+  .boda-section { background: var(--dark2); }
+  .boda-content {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 4rem; align-items: center;
+  }
+  .boda-visual {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 2rem;
+    box-shadow: var(--glow);
+  }
+  .boda-map {
+    background: var(--dark3);
+    border-radius: 12px; height: 200px;
+    display: flex; align-items: center; justify-content: center;
+    margin-bottom: 1.5rem; position: relative; overflow: hidden;
+  }
+  .boda-map .map-grid {
+    position: absolute; inset: 0;
+    background-image:
+      linear-gradient(rgba(108,99,255,0.08) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(108,99,255,0.08) 1px, transparent 1px);
+    background-size: 30px 30px;
+  }
+  .map-pin {
+    position: absolute; font-size: 1.5rem;
+    animation: bounce 2s ease-in-out infinite;
+  }
+  .pin-a { top: 20%; left: 25%; }
+  .pin-b { bottom: 25%; right: 30%; color: var(--accent); }
+  @keyframes bounce { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)} }
+
+  .route-line {
+    position: absolute; top: 50%; left: 30%; right: 35%;
+    height: 2px; background: linear-gradient(90deg, #6C63FF, #38BDF8);
+    opacity: 0.6;
+    transform: rotate(-5deg);
+  }
+  .rider-avatar {
+    position: absolute; top: 45%; left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 1.8rem;
+    animation: moveRider 3s ease-in-out infinite;
+  }
+  @keyframes moveRider {
+    0%,100%{left:40%} 50%{left:55%}
+  }
+
+  .rider-cards { display: flex; flex-direction: column; gap: 0.75rem; }
+  .rider-card {
+    background: var(--dark3); border: 1px solid var(--border);
+    border-radius: 12px; padding: 0.85rem;
+    display: flex; align-items: center; gap: 0.75rem;
+  }
+  .rider-photo {
+    width: 40px; height: 40px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.3rem;
+    background: linear-gradient(135deg, #4B44CC, var(--dark3));
+    border: 2px solid var(--border);
+  }
+  .rider-info { flex: 1; }
+  .rider-name { font-size: 0.82rem; font-weight: 600; }
+  .rider-status { font-size: 0.7rem; color: var(--text-muted); }
+  .rider-badge {
+    padding: 0.25rem 0.6rem; border-radius: 100px; font-size: 0.65rem; font-weight: 600;
+  }
+  .available { background: rgba(108,99,255,0.18); color: var(--primary); }
+  .busy { background: rgba(56,189,248,0.15); color: var(--accent); }
+
+  /* ─── PAYMENT ─── */
+  .payment-section { }
+  .payment-content {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 4rem; align-items: center;
+  }
+  .payment-methods {
+    display: flex; flex-direction: column; gap: 1rem; margin-top: 1.5rem;
+  }
+  .pay-method {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px; padding: 1.1rem 1.4rem;
+    display: flex; align-items: center; gap: 1rem;
+    transition: all 0.2s;
+  }
+  .pay-method:hover { border-color: var(--border-hover); }
+  .pay-icon {
+    width: 44px; height: 44px; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.4rem; font-weight: 700;
+    flex-shrink: 0;
+  }
+  .pay-mpesa { background: rgba(108,99,255,0.18); color: var(--primary); font-size: 0.7rem; text-align: center; line-height: 1.2; }
+  .pay-info h4 { font-size: 0.9rem; font-weight: 600; margin-bottom: 0.1rem; }
+  .pay-info p { font-size: 0.78rem; color: var(--text-muted); }
+  .pay-check { color: var(--primary); margin-left: auto; font-size: 1.2rem; }
+
+  .payment-visual {
+    background: var(--card);
+    border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 2rem; box-shadow: var(--glow);
+  }
+  .pay-card-mock {
+    background: linear-gradient(135deg, #4B44CC, #1A0A4A);
+    border-radius: 14px; padding: 1.5rem; margin-bottom: 1.5rem;
+  }
+  .pay-card-label { font-size: 0.7rem; opacity: 0.7; margin-bottom: 0.25rem; }
+  .pay-card-amount { font-family: 'Syne', sans-serif; font-size: 2rem; font-weight: 800; }
+  .pay-card-row { display: flex; justify-content: space-between; margin-top: 1rem; font-size: 0.75rem; opacity: 0.7; }
+
+  .pay-form { display: flex; flex-direction: column; gap: 0.75rem; }
+  .pay-input {
+    background: var(--dark3); border: 1px solid var(--border);
+    border-radius: 10px; padding: 0.75rem 1rem;
+    color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 0.88rem;
+    outline: none; transition: border-color 0.2s;
+  }
+  .pay-input:focus { border-color: var(--primary); }
+  .pay-input::placeholder { color: var(--text-dim); }
+  .pay-submit {
+    background: var(--primary); border: none; border-radius: 10px; padding: 0.85rem;
+    color: #000; font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.95rem;
+    cursor: pointer; transition: all 0.2s;
+    display: flex; align-items: center; justify-content: center; gap: 0.5rem;
+  }
+  .pay-submit:hover { background: var(--primary-light); transform: translateY(-1px); }
+
+  /* ─── HOSTEL SECTION ─── */
+  .hostel-section { background: var(--dark2); }
+  .hostel-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.25rem; margin-top: 2.5rem; }
+  .hostel-card {
+    background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden;
+    transition: all 0.3s; cursor: pointer;
+  }
+  .hostel-card:hover { border-color: var(--border-hover); transform: translateY(-4px); box-shadow: var(--glow); }
+  .hostel-img { height: 160px; display: flex; align-items: center; justify-content: center; font-size: 4rem; position: relative; }
+  .hostel-img .distance-tag {
+    position: absolute; bottom: 10px; left: 10px;
+    background: rgba(0,0,0,0.7); padding: 0.25rem 0.6rem; border-radius: 6px;
+    font-size: 0.7rem; display: flex; align-items: center; gap: 0.3rem;
+  }
+  .hostel-body { padding: 1.1rem; }
+  .hostel-body h4 { font-family: 'Syne', sans-serif; font-size: 0.95rem; font-weight: 700; margin-bottom: 0.3rem; }
+  .hostel-features { display: flex; gap: 0.5rem; flex-wrap: wrap; margin: 0.6rem 0; }
+  .hostel-tag { background: var(--dark3); border: 1px solid var(--border); padding: 0.15rem 0.5rem; border-radius: 6px; font-size: 0.68rem; color: var(--text-muted); }
+  .hostel-footer { display: flex; align-items: center; justify-content: space-between; margin-top: 0.75rem; }
+  .hostel-price { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 1rem; color: var(--primary); }
+  .hostel-price span { font-size: 0.7rem; font-weight: 400; color: var(--text-muted); font-family: 'DM Sans', sans-serif; }
+
+  /* ─── REGISTRATION ─── */
+  .register-section { position: relative; overflow: hidden; }
+  .register-bg {
+    position: absolute; inset: 0;
+    background: radial-gradient(ellipse 60% 60% at 50% 50%, rgba(108,99,255,0.1), transparent 70%);
+  }
+  .register-content { position: relative; z-index: 1; }
+  .register-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 3rem; margin-top: 3rem; }
+  .register-card {
+    background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 2rem;
+    transition: all 0.3s;
+  }
+  .register-card:hover { border-color: var(--border-hover); box-shadow: var(--glow); }
+  .reg-icon { font-size: 2.5rem; margin-bottom: 1rem; }
+  .register-card h3 { font-family: 'Syne', sans-serif; font-size: 1.3rem; font-weight: 700; margin-bottom: 0.5rem; }
+  .register-card p { font-size: 0.88rem; color: var(--text-muted); line-height: 1.7; margin-bottom: 1.5rem; }
+  .perks { display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 1.5rem; }
+  .perk { display: flex; align-items: center; gap: 0.6rem; font-size: 0.85rem; }
+  .perk::before { content: '✓'; color: var(--primary); font-weight: 700; }
+
+  /* ─── MODAL ─── */
+  .modal-overlay {
+    position: fixed; inset: 0; z-index: 2000;
+    background: rgba(0,0,0,0.8); backdrop-filter: blur(8px);
+    display: flex; align-items: center; justify-content: center;
+    padding: 1rem; opacity: 0; pointer-events: none;
+    transition: opacity 0.3s;
+  }
+  .modal-overlay.open { opacity: 1; pointer-events: all; }
+  .modal {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 20px; padding: 2rem; width: 100%; max-width: 440px;
+    transform: translateY(20px); transition: transform 0.3s;
+    max-height: 90vh; overflow-y: auto;
+  }
+  .modal-overlay.open .modal { transform: translateY(0); }
+  .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
+  .modal-header h3 { font-family: 'Syne', sans-serif; font-size: 1.3rem; font-weight: 700; }
+  .modal-close {
+    width: 32px; height: 32px; border-radius: 8px;
+    background: var(--dark3); border: none; color: var(--text);
+    cursor: pointer; font-size: 1.1rem; display: flex; align-items: center; justify-content: center;
+  }
+  .form-group { margin-bottom: 1rem; }
+  .form-label { font-size: 0.82rem; font-weight: 500; color: var(--text-muted); margin-bottom: 0.4rem; display: block; }
+  .form-input {
+    width: 100%; background: var(--dark3); border: 1.5px solid var(--border);
+    border-radius: 10px; padding: 0.75rem 1rem;
+    color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 0.9rem;
+    outline: none; transition: border-color 0.2s;
+  }
+  .form-input:focus { border-color: var(--primary); }
+  .form-input::placeholder { color: var(--text-dim); }
+  .form-select {
+    width: 100%; background: var(--dark3); border: 1.5px solid var(--border);
+    border-radius: 10px; padding: 0.75rem 1rem;
+    color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 0.9rem;
+    outline: none; cursor: pointer; appearance: none;
+  }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+
+  /* ─── TOAST ─── */
+  .toast {
+    position: fixed; bottom: 2rem; right: 2rem; z-index: 3000;
+    background: var(--card); border: 1px solid var(--primary);
+    border-radius: 12px; padding: 1rem 1.5rem;
+    display: flex; align-items: center; gap: 0.75rem;
+    box-shadow: var(--shadow); max-width: 340px;
+    transform: translateX(120%); transition: transform 0.4s cubic-bezier(0.34,1.56,0.64,1);
+  }
+  .toast.show { transform: translateX(0); }
+  .toast-icon { font-size: 1.5rem; }
+  .toast-msg { font-size: 0.88rem; line-height: 1.4; }
+  .toast-msg strong { display: block; font-weight: 600; margin-bottom: 0.1rem; }
+
+  /* ─── FOOTER ─── */
+  footer {
+    background: var(--dark2); border-top: 1px solid var(--border);
+    padding: 4rem 2rem 2rem;
+  }
+  .footer-grid {
+    max-width: 1200px; margin: 0 auto;
+    display: grid; grid-template-columns: 2fr 1fr 1fr 1fr;
+    gap: 3rem; margin-bottom: 3rem;
+  }
+  .footer-brand p { font-size: 0.85rem; color: var(--text-muted); line-height: 1.7; margin: 0.75rem 0 1.25rem; }
+  .social-links { display: flex; gap: 0.75rem; }
+  .social-btn {
+    width: 36px; height: 36px; border-radius: 8px;
+    background: var(--dark3); border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.9rem; cursor: pointer; transition: all 0.2s;
+    text-decoration: none; color: var(--text-muted);
+  }
+  .social-btn:hover { border-color: var(--primary); color: var(--primary); }
+
+  .footer-col h4 { font-family: 'Syne', sans-serif; font-size: 0.9rem; font-weight: 700; margin-bottom: 1rem; }
+  .footer-col ul { list-style: none; display: flex; flex-direction: column; gap: 0.5rem; }
+  .footer-col a { color: var(--text-muted); text-decoration: none; font-size: 0.85rem; transition: color 0.2s; }
+  .footer-col a:hover { color: var(--primary); }
+
+  .footer-bottom {
+    max-width: 1200px; margin: 0 auto;
+    display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;
+    padding-top: 2rem; border-top: 1px solid var(--border);
+    font-size: 0.8rem; color: var(--text-muted);
+  }
+  .footer-bottom a { color: var(--primary); text-decoration: none; }
+
+  /* ─── ANIMATIONS ─── */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .reveal {
+    opacity: 0; transform: translateY(30px);
+    transition: opacity 0.6s, transform 0.6s;
+  }
+  .reveal.visible { opacity: 1; transform: translateY(0); }
+
+  /* ─── MOBILE ─── */
+  .mobile-menu {
+    display: none;
+    flex-direction: column; gap: 0.25rem;
+    padding: 1rem; background: var(--dark2);
+    border-bottom: 1px solid var(--border);
+  }
+  .mobile-menu.open { display: flex; }
+  .mobile-menu a {
+    color: var(--text-muted); text-decoration: none;
+    padding: 0.75rem 1rem; border-radius: 8px; font-size: 0.9rem;
+    transition: all 0.2s;
+  }
+  .mobile-menu a:hover { background: rgba(108,99,255,0.08); color: var(--primary); }
+
+  /* ─── RESPONSIVE ─── */
+  @media (max-width: 900px) {
+    .hero-content { grid-template-columns: 1fr; gap: 3rem; }
+    .hero-visual { display: none; }
+    .boda-content, .payment-content, .register-grid { grid-template-columns: 1fr; }
+    .footer-grid { grid-template-columns: 1fr 1fr; }
+    .nav-links, .nav-cta .btn-outline { display: none; }
+    .hamburger { display: flex; }
+    .steps-line { display: none; }
+  }
+
+  @media (max-width: 600px) {
+    nav { padding: 0.85rem 1.25rem; }
+    section { padding: 3.5rem 1.25rem; }
+    .hero { padding: 6rem 1.25rem 3rem; }
+    .hero-stats { gap: 1.5rem; }
+    .footer-grid { grid-template-columns: 1fr; gap: 2rem; }
+    .form-row { grid-template-columns: 1fr; }
+    h1 { font-size: 2rem; }
+    .float-1, .float-2 { display: none; }
+    .listings-grid { grid-template-columns: 1fr; }
+    .hostel-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ─── NAVIGATION ─── -->
+<nav id="navbar">
+  <a href="#" class="nav-logo">Uni<span>Connect</span></a>
+  <ul class="nav-links">
+    <li><a href="#hostels">Hostels</a></li>
+    <li><a href="#services">Services</a></li>
+    <li><a href="#boda">Boda Boda</a></li>
+    <li><a href="#payment">Payment</a></li>
+    <li><a href="#register">Register</a></li>
+  </ul>
+  <div class="nav-cta">
+    <button class="btn btn-outline" onclick="openModal('login')">Log In</button>
+    <button class="btn btn-primary" onclick="openModal('signup')">Get Started</button>
+    <button class="hamburger" id="hamburger" onclick="toggleMobileMenu()">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+</nav>
+
+<!-- Mobile Menu -->
+<div class="mobile-menu" id="mobileMenu">
+  <a href="#hostels">🏠 Hostels</a>
+  <a href="#services">🛍️ Services & Shops</a>
+  <a href="#boda">🏍️ Boda Boda</a>
+  <a href="#payment">💳 Payment</a>
+  <a href="#register">✍️ Register</a>
+  <a href="#" onclick="openModal('login')" style="color: var(--primary); font-weight:600;">Log In →</a>
+</div>
+
+<!-- ─── HERO ─── -->
+<section class="hero">
+  <div class="hero-bg"></div>
+  <div class="hero-grid"></div>
+  <div class="hero-content">
+    <div>
+      <div class="hero-badge"><span class="dot"></span> Live in Your Area · Chuka Region</div>
+      <h1>Your Campus.<br><span class="highlight">Connected.</span><br>Your Life, Simplified.</h1>
+      <p class="hero-desc">Find hostels, order from local businesses, hire a boda boda, and pay seamlessly with M-Pesa — all in one platform built for university students.</p>
+      <div class="hero-actions">
+        <button class="btn btn-primary btn-lg" onclick="openModal('signup')">🎓 Join as Student</button>
+        <button class="btn btn-outline btn-lg" onclick="openModal('business')">📦 List Your Business</button>
+      </div>
+      <div class="hero-stats">
+        <div class="stat-item"><div class="stat-num">2,400+</div><div class="stat-label">Students Connected</div></div>
+        <div class="stat-item"><div class="stat-num">340+</div><div class="stat-label">Local Businesses</div></div>
+        <div class="stat-item"><div class="stat-num">70km</div><div class="stat-label">Coverage Radius</div></div>
+      </div>
+    </div>
+    <div class="hero-visual">
+      <div class="phone-mockup">
+        <div class="phone-notch"></div>
+        <div class="phone-screen">
+          <div class="app-header">
+            <div class="app-logo-sm">UniConnect</div>
+            <div class="app-avatar"></div>
+          </div>
+          <div class="search-bar-mock">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+            Search hostels, shops, riders…
+          </div>
+          <div class="category-chips">
+            <div class="chip chip-active">🏠 Hostels</div>
+            <div class="chip chip-inactive">🍽️ Food</div>
+            <div class="chip chip-inactive">💊 Chemist</div>
+            <div class="chip chip-inactive">🏍️ Boda</div>
+          </div>
+          <div class="listing-cards-mock">
+            <div class="listing-card-mock">
+              <div class="listing-icon" style="background:rgba(108,99,255,0.18)">🏠</div>
+              <div class="listing-info">
+                <div class="listing-name">Greenview Hostels</div>
+                <div class="listing-meta">1.2 km away · Self-contain</div>
+              </div>
+              <div class="listing-badge badge-open">Open</div>
+            </div>
+            <div class="listing-card-mock">
+              <div class="listing-icon" style="background:rgba(56,189,248,0.15)">🍲</div>
+              <div class="listing-info">
+                <div class="listing-name">Mama Achieng's Kitchen</div>
+                <div class="listing-meta">0.8 km · Delivery available</div>
+              </div>
+              <div class="listing-badge badge-delivery">Deliver</div>
+            </div>
+            <div class="listing-card-mock">
+              <div class="listing-icon" style="background:rgba(168,85,247,0.18)">💊</div>
+              <div class="listing-info">
+                <div class="listing-name">Campus Pharmacy</div>
+                <div class="listing-meta">0.3 km · 24hrs</div>
+              </div>
+              <div class="listing-badge badge-open">Open</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="floating-card float-1">
+        <div class="float-label">🏍️ Rider nearby</div>
+        <div class="float-value">2 mins away</div>
+      </div>
+      <div class="floating-card float-2">
+        <div class="float-label">💳 M-Pesa</div>
+        <div class="float-value">KSh 350 paid</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── HOW IT WORKS ─── -->
+<section class="how-section" id="how">
+  <div class="section-inner">
+    <div class="how-header">
+      <div>
+        <div class="section-tag">How It Works</div>
+        <h2>Four steps to <em>everything</em> you need</h2>
+      </div>
+      <button class="btn btn-primary" onclick="openModal('signup')">Start Now →</button>
+    </div>
+    <div class="steps-container reveal">
+      <div class="steps-line"></div>
+      <div class="steps-grid">
+        <div class="step">
+          <div class="step-num">1</div>
+          <h3>Create Account</h3>
+          <p>Sign up with your student ID or phone number in under 2 minutes</p>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <h3>Discover Nearby</h3>
+          <p>Browse hostels, food, shops, chemists and more within 70km of campus</p>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <h3>Request & Order</h3>
+          <p>Book a hostel, order food, request a boda boda — all in one app</p>
+        </div>
+        <div class="step">
+          <div class="step-num">4</div>
+          <h3>Pay with M-Pesa</h3>
+          <p>Instant, secure payments via Safaricom M-Pesa STK push to your phone</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── SERVICES ─── -->
+<section id="services">
+  <div class="section-inner">
+    <div class="section-tag">Services</div>
+    <h2>Everything around <em>campus</em>, one tap away</h2>
+    <p class="section-desc">From groceries to healthcare to dining — we connect you to every essential service in your area.</p>
+    <div class="services-grid reveal">
+      <div class="service-card" onclick="showListings('food')">
+        <div class="service-icon icon-orange">🍽️</div>
+        <h3>Restaurants & Hotels</h3>
+        <p>Discover local restaurants, lodges and hotels near campus. Order food for delivery or dine in.</p>
+        <a class="card-link" href="#listings">Browse Food →</a>
+      </div>
+      <div class="service-card" onclick="showListings('mama')">
+        <div class="service-icon icon-green">🥦</div>
+        <h3>Mama Mboga & Groceries</h3>
+        <p>Fresh vegetables, fruits, and everyday groceries from trusted local vendors. Order and get delivered.</p>
+        <a class="card-link" href="#listings">Browse Shops →</a>
+      </div>
+      <div class="service-card" onclick="showListings('chemist')">
+        <div class="service-icon icon-blue">💊</div>
+        <h3>Chemists & Pharmacies</h3>
+        <p>Medicine, healthcare products and consultations from licensed chemists near you.</p>
+        <a class="card-link" href="#listings">Find Chemist →</a>
+      </div>
+      <div class="service-card" onclick="showListings('shop')">
+        <div class="service-icon icon-yellow">🛍️</div>
+        <h3>Shops & Markets</h3>
+        <p>Stationery, electronics, clothing, and more from local shops. Support businesses in your community.</p>
+        <a class="card-link" href="#listings">Browse Shops →</a>
+      </div>
+      <div class="service-card" onclick="showListings('salon')">
+        <div class="service-icon icon-purple">✂️</div>
+        <h3>Salons & Barbershops</h3>
+        <p>Book appointments at salons and barbershops near campus. Get styled on your schedule.</p>
+        <a class="card-link" href="#listings">Book Now →</a>
+      </div>
+      <div class="service-card" onclick="showListings('social')">
+        <div class="service-icon icon-teal">🏥</div>
+        <h3>Social Amenities</h3>
+        <p>Hospitals, clinics, banks, M-Pesa agents, churches, and all essential social amenities nearby.</p>
+        <a class="card-link" href="#listings">View All →</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── LISTINGS ─── -->
+<section id="listings" style="padding-top: 0; background: var(--dark2);">
+  <div class="section-inner">
+    <div class="section-tag">Nearby Listings</div>
+    <h2>Open <em>now</em>, near you</h2>
+    <div class="tabs">
+      <button class="tab active" onclick="filterTab(this,'all')">All</button>
+      <button class="tab" onclick="filterTab(this,'food')">🍽️ Food</button>
+      <button class="tab" onclick="filterTab(this,'mama')">🥦 Groceries</button>
+      <button class="tab" onclick="filterTab(this,'chemist')">💊 Chemists</button>
+      <button class="tab" onclick="filterTab(this,'shop')">🛍️ Shops</button>
+      <button class="tab" onclick="filterTab(this,'social')">🏥 Amenities</button>
+    </div>
+    <div class="listings-grid reveal" id="listingsGrid">
+      <!-- Cards injected by JS -->
+    </div>
+  </div>
+</section>
+
+<!-- ─── HOSTELS ─── -->
+<section id="hostels" class="hostel-section">
+  <div class="section-inner">
+    <div style="display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:1rem;margin-bottom:0.5rem">
+      <div>
+        <div class="section-tag">Student Accommodation</div>
+        <h2>Find your <em>perfect</em> hostel</h2>
+        <p class="section-desc">Browse verified hostels within 70km of campus. Compare amenities, prices and book directly.</p>
+      </div>
+      <button class="btn btn-primary" onclick="openModal('hostel')">+ List Your Hostel</button>
+    </div>
+    <div class="hostel-grid reveal" id="hostelGrid">
+      <!-- Injected by JS -->
+    </div>
+  </div>
+</section>
+
+<!-- ─── BODA BODA ─── -->
+<section id="boda" class="boda-section">
+  <div class="section-inner boda-content">
+    <div class="reveal">
+      <div class="section-tag">Boda Boda Network</div>
+      <h2>Fast rides &<em> deliveries</em> on demand</h2>
+      <p class="section-desc" style="margin-bottom:1.5rem">Connect with trusted boda boda riders for personal transport, business deliveries, and errands. Riders can accept jobs from both students and businesses.</p>
+      <div style="display:flex;flex-direction:column;gap:0.75rem;margin-bottom:2rem">
+        <div style="display:flex;align-items:center;gap:0.75rem;font-size:0.9rem">
+          <span style="color:var(--primary);font-size:1.2rem">✓</span> Request a ride directly to your location
+        </div>
+        <div style="display:flex;align-items:center;gap:0.75rem;font-size:0.9rem">
+          <span style="color:var(--primary);font-size:1.2rem">✓</span> Order delivery from any registered business
+        </div>
+        <div style="display:flex;align-items:center;gap:0.75rem;font-size:0.9rem">
+          <span style="color:var(--primary);font-size:1.2rem">✓</span> Riders get jobs from students AND shops
+        </div>
+        <div style="display:flex;align-items:center;gap:0.75rem;font-size:0.9rem">
+          <span style="color:var(--primary);font-size:1.2rem">✓</span> Real-time location tracking & M-Pesa payment
+        </div>
+      </div>
+      <div style="display:flex;gap:0.75rem;flex-wrap:wrap">
+        <button class="btn btn-primary btn-lg" onclick="openModal('ride')">🏍️ Request a Ride</button>
+        <button class="btn btn-outline btn-lg" onclick="openModal('rider')">Register as Rider</button>
+      </div>
+    </div>
+    <div class="boda-visual reveal">
+      <div class="boda-map">
+        <div class="map-grid"></div>
+        <div class="map-pin pin-a">📍</div>
+        <div class="map-pin pin-b">🏁</div>
+        <div class="route-line"></div>
+        <div class="rider-avatar">🏍️</div>
+      </div>
+      <div class="rider-cards" id="riderCards">
+        <!-- Injected by JS -->
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── PAYMENT ─── -->
+<section id="payment" class="payment-section">
+  <div class="section-inner payment-content">
+    <div class="reveal">
+      <div class="section-tag">Secure Payments</div>
+      <h2>Pay instantly with <em>M-Pesa</em></h2>
+      <p class="section-desc">All transactions are powered by Safaricom's M-Pesa. Enter your phone number and confirm payment directly on your phone — fast, safe, and familiar.</p>
+      <div class="payment-methods">
+        <div class="pay-method">
+          <div class="pay-icon pay-mpesa">M<br>Pesa</div>
+          <div class="pay-info"><h4>M-Pesa STK Push</h4><p>Prompt sent directly to your Safaricom number</p></div>
+          <span class="pay-check">✓</span>
+        </div>
+        <div class="pay-method">
+          <div class="pay-icon" style="background:rgba(168,85,247,0.18);color:var(--accent2);font-size:1.5rem">🏦</div>
+          <div class="pay-info"><h4>Paybill & Till Numbers</h4><p>Pay businesses directly via their paybill</p></div>
+          <span class="pay-check">✓</span>
+        </div>
+        <div class="pay-method">
+          <div class="pay-icon" style="background:rgba(56,189,248,0.15);color:var(--accent);font-size:1.5rem">💸</div>
+          <div class="pay-info"><h4>Send Money (P2P)</h4><p>Pay riders and individuals directly</p></div>
+          <span class="pay-check">✓</span>
+        </div>
+      </div>
+    </div>
+    <div class="payment-visual reveal">
+      <div class="pay-card-mock">
+        <div class="pay-card-label">Total Amount</div>
+        <div class="pay-card-amount">KSh 450</div>
+        <div class="pay-card-row">
+          <span>Boda Boda Delivery</span>
+          <span>M-Pesa</span>
+        </div>
+      </div>
+      <div class="pay-form">
+        <div class="form-group">
+          <label class="form-label">M-Pesa Phone Number</label>
+          <input class="pay-input" placeholder="0712 345 678" type="tel" id="mpesaPhone">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Order Summary</label>
+          <input class="pay-input" value="Delivery from Mama Achieng's — KSh 450" readonly>
+        </div>
+        <button class="pay-submit" onclick="simulateMpesa()">
+          📱 Send M-Pesa Prompt
+        </button>
+        <p style="font-size:0.72rem;color:var(--text-muted);text-align:center;margin-top:0.5rem">You will receive an M-Pesa prompt on your phone to confirm payment</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── REGISTER ─── -->
+<section id="register" class="register-section">
+  <div class="register-bg"></div>
+  <div class="section-inner register-content">
+    <div style="text-align:center;margin-bottom:0.5rem">
+      <div class="section-tag" style="justify-content:center">Join UniConnect</div>
+      <h2>Start connecting <em>today</em></h2>
+      <p class="section-desc" style="margin:0 auto;text-align:center;max-width:480px">Whether you're a student, a local business, or a boda boda rider — there's a place for you on UniConnect.</p>
+    </div>
+    <div class="register-grid reveal">
+      <div class="register-card">
+        <div class="reg-icon">🎓</div>
+        <h3>I'm a Student</h3>
+        <p>Access hostels, food, shops, pharmacies and transport all in one place. Save time and money while at university.</p>
+        <div class="perks">
+          <div class="perk">Find hostels within 70km of campus</div>
+          <div class="perk">Order food & groceries for delivery</div>
+          <div class="perk">Request boda boda transport</div>
+          <div class="perk">Pay everything with M-Pesa</div>
+        </div>
+        <button class="btn btn-primary" style="width:100%" onclick="openModal('signup')">Create Student Account</button>
+      </div>
+      <div class="register-card">
+        <div class="reg-icon">🏪</div>
+        <h3>I'm a Business / Service</h3>
+        <p>Reach thousands of students daily. List your hostel, shop, restaurant, or service and grow your customer base.</p>
+        <div class="perks">
+          <div class="perk">Hostel owners, restaurants, shops</div>
+          <div class="perk">Chemists, salons & social amenities</div>
+          <div class="perk">Receive M-Pesa payments directly</div>
+          <div class="perk">Enable boda boda deliveries</div>
+        </div>
+        <button class="btn btn-accent" style="width:100%" onclick="openModal('business')">List Your Business</button>
+      </div>
+    </div>
+    <div style="text-align:center;margin-top:2rem">
+      <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:0.75rem">Are you a boda boda rider?</p>
+      <button class="btn btn-outline" onclick="openModal('rider')">🏍️ Register as a Rider — Earn More</button>
+    </div>
+  </div>
+</section>
+
+<!-- ─── FOOTER ─── -->
+<footer>
+  <div class="footer-grid">
+    <div class="footer-brand">
+      <a href="#" class="nav-logo" style="font-size:1.4rem">Uni<span>Connect</span></a>
+      <p>Connecting students, businesses, and boda boda riders in the university ecosystem. Built with ❤️ for campus life.</p>
+      <div class="social-links">
+        <a class="social-btn" href="#">𝕏</a>
+        <a class="social-btn" href="#">f</a>
+        <a class="social-btn" href="#">in</a>
+        <a class="social-btn" href="#">📱</a>
+      </div>
+    </div>
+    <div class="footer-col">
+      <h4>Services</h4>
+      <ul>
+        <li><a href="#hostels">Hostels</a></li>
+        <li><a href="#services">Restaurants</a></li>
+        <li><a href="#services">Mama Mboga</a></li>
+        <li><a href="#services">Chemists</a></li>
+        <li><a href="#boda">Boda Boda</a></li>
+      </ul>
+    </div>
+    <div class="footer-col">
+      <h4>Platform</h4>
+      <ul>
+        <li><a href="#how">How It Works</a></li>
+        <li><a href="#payment">M-Pesa Payments</a></li>
+        <li><a href="#register">For Businesses</a></li>
+        <li><a href="#register">For Riders</a></li>
+      </ul>
+    </div>
+    <div class="footer-col">
+      <h4>Support</h4>
+      <ul>
+        <li><a href="#">Help Center</a></li>
+        <li><a href="#">Contact Us</a></li>
+        <li><a href="#">Safety</a></li>
+        <li><a href="#">Privacy Policy</a></li>
+        <li><a href="#">Terms of Use</a></li>
+      </ul>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <span>© 2025 UniConnect. Made for campus life in Kenya 🇰🇪</span>
+    <span>Powered by <a href="#">Safaricom M-Pesa</a> · <a href="#">Contact Support</a></span>
+  </div>
+</footer>
+
+<!-- ─── MODALS ─── -->
+<div class="modal-overlay" id="modalOverlay" onclick="closeModalOnBg(event)">
+  <div class="modal" id="modalContent"></div>
+</div>
+
+<!-- ─── TOAST ─── -->
+<div class="toast" id="toast">
+  <span class="toast-icon" id="toastIcon">✅</span>
+  <div class="toast-msg"><strong id="toastTitle"></strong><span id="toastBody"></span></div>
+</div>
+
+<script>
+// ─── DATA ───
+const listings = [
+  { id:1, cat:'food', icon:'🍽️', bg:'rgba(56,189,248,0.12)', name:'Mama Achieng Kitchen', sub:'Home-cooked meals · Ugali, sukuma, rice', rating:4.8, reviews:132, dist:'0.8 km', status:'Open', statusClass:'badge-open', delivery:true },
+  { id:2, cat:'food', icon:'🍕', bg:'rgba(56,189,248,0.12)', name:'Chuka Fast Foods', sub:'Burgers, fries, sandwiches · Quick bites', rating:4.5, reviews:89, dist:'1.1 km', status:'Open', statusClass:'badge-open', delivery:true },
+  { id:3, cat:'mama', icon:'🥦', bg:'rgba(108,99,255,0.12)', name:'Wanjiku Fresh Produce', sub:'Vegetables, fruits, tomatoes, onions daily', rating:4.7, reviews:210, dist:'0.5 km', status:'Open', statusClass:'badge-open', delivery:true },
+  { id:4, cat:'chemist', icon:'💊', bg:'rgba(168,85,247,0.15)', name:'Campus Pharmacy', sub:'Prescription & OTC · 24 hrs', rating:4.9, reviews:305, dist:'0.3 km', status:'24hrs', statusClass:'badge-open', delivery:false },
+  { id:5, cat:'shop', icon:'📚', bg:'rgba(108,99,255,0.12)', name:'UniStationary & Books', sub:'Books, pens, printing, photocopying', rating:4.6, reviews:178, dist:'0.2 km', status:'Open', statusClass:'badge-open', delivery:false },
+  { id:6, cat:'shop', icon:'👕', bg:'rgba(168,85,247,0.15)', name:'Campus Fashion Hub', sub:'Clothes, shoes, accessories', rating:4.3, reviews:67, dist:'1.4 km', status:'Open', statusClass:'badge-open', delivery:true },
+  { id:7, cat:'social', icon:'🏥', bg:'rgba(56,189,248,0.15)', name:'Chuka District Hospital', sub:'Emergency, outpatient, pharmacy', rating:4.4, reviews:420, dist:'2.1 km', status:'24hrs', statusClass:'badge-open', delivery:false },
+  { id:8, cat:'social', icon:'🏦', bg:'rgba(168,85,247,0.15)', name:'Equity Bank — Chuka', sub:'ATM, mobile banking, M-Pesa super agent', rating:4.5, reviews:88, dist:'1.8 km', status:'Open', statusClass:'badge-open', delivery:false },
+  { id:9, cat:'food', icon:'☕', bg:'rgba(56,189,248,0.12)', name:'Campus Café & Hangout', sub:'Coffee, snacks, WiFi, chill spot', rating:4.9, reviews:243, dist:'0.1 km', status:'Open', statusClass:'badge-open', delivery:false },
+];
+
+const hostels = [
+  { name:'Greenview Student Hostels', dist:'1.2 km', price:'3,500', period:'month', features:['WiFi', 'Water', 'Security', 'Cleaning'], rating:4.8, type:'Self-contain', icon:'🏠', bg:'rgba(108,99,255,0.12)' },
+  { name:'Chuka Paradise Lodge', dist:'2.4 km', price:'2,800', period:'month', features:['WiFi', 'Parking', 'Security', 'Kitchen'], rating:4.6, type:'Bedsitter', icon:'🏡', bg:'rgba(168,85,247,0.12)' },
+  { name:'UniHaven Male Hostels', dist:'0.6 km', price:'2,200', period:'month', features:['WiFi', 'Water', 'Study Room'], rating:4.5, type:'Single Room', icon:'🏢', bg:'rgba(56,189,248,0.12)' },
+  { name:'SafeZone Ladies Hostel', dist:'0.9 km', price:'2,500', period:'month', features:['WiFi', 'CCTV', 'Water', 'Security'], rating:4.9, type:'Ladies Only', icon:'🏠', bg:'rgba(168,85,247,0.15)' },
+  { name:'Riverside Cottages', dist:'3.1 km', price:'4,200', period:'month', features:['WiFi', 'Parking', 'Water', 'Kitchen', 'Garden'], rating:4.7, type:'Self-contain', icon:'🏡', bg:'rgba(56,189,248,0.12)' },
+  { name:'Budget Student Flats', dist:'0.4 km', price:'1,800', period:'month', features:['Water', 'Security'], rating:4.2, type:'Shared Room', icon:'🏢', bg:'rgba(108,99,255,0.12)' },
+];
+
+const riders = [
+  { name:'James Mwangi', status:'Available', statusClass:'available', bike:'Honda CG 125', area:'Chuka Campus — Town' },
+  { name:'Peter Njau', status:'On Delivery', statusClass:'busy', bike:'Bajaj Boxer', area:'Chuka — Tharaka Rd' },
+  { name:'Simon Kariuki', status:'Available', statusClass:'available', bike:'TVS Star', area:'Campus vicinity' },
+];
+
+// ─── RENDER LISTINGS ───
+function renderListings(filter) {
+  const grid = document.getElementById('listingsGrid');
+  const data = filter === 'all' ? listings : listings.filter(l => l.cat === filter);
+  grid.innerHTML = data.map(l => `
+    <div class="listing-card" onclick="showToast('📍','${l.name}','Opening details…')">
+      <div class="listing-img" style="background:${l.bg}">
+        <span style="font-size:3rem">${l.icon}</span>
+        <div class="status-pill ${l.statusClass}">${l.status}</div>
+      </div>
+      <div class="listing-body">
+        <h4>${l.name}</h4>
+        <p class="listing-sub">${l.sub}</p>
+        <div class="listing-meta-row">
+          <span class="rating">★ ${l.rating} <span style="color:var(--text-muted)">(${l.reviews})</span></span>
+          <span class="distance">📍 ${l.dist}</span>
+        </div>
+        ${l.delivery ? `<button class="btn btn-primary" style="width:100%;margin-top:0.75rem;padding:0.55rem;font-size:0.82rem" onclick="event.stopPropagation();openModal('order','${l.name}')">🛵 Order Delivery</button>` : `<button class="btn btn-outline" style="width:100%;margin-top:0.75rem;padding:0.55rem;font-size:0.82rem" onclick="event.stopPropagation();openModal('visit','${l.name}')">📞 Contact</button>`}
+      </div>
+    </div>
+  `).join('');
+}
+
+function renderHostels() {
+  document.getElementById('hostelGrid').innerHTML = hostels.map(h => `
+    <div class="hostel-card" onclick="openModal('hostelView','${h.name}')">
+      <div class="hostel-img" style="background:${h.bg}">
+        <span>${h.icon}</span>
+        <div class="distance-tag">📍 ${h.dist}</div>
+      </div>
+      <div class="hostel-body">
+        <h4>${h.name}</h4>
+        <p style="font-size:0.75rem;color:var(--text-muted)">${h.type}</p>
+        <div class="hostel-features">
+          ${h.features.map(f=>`<span class="hostel-tag">${f}</span>`).join('')}
+        </div>
+        <div class="hostel-footer">
+          <div class="hostel-price">KSh ${h.price} <span>/ ${h.period}</span></div>
+          <div class="rating" style="font-size:0.75rem">★ ${h.rating}</div>
+        </div>
+        <button class="btn btn-primary" style="width:100%;margin-top:0.75rem;padding:0.55rem;font-size:0.82rem" onclick="event.stopPropagation();openModal('bookHostel','${h.name}')">Book Now</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function renderRiders() {
+  document.getElementById('riderCards').innerHTML = riders.map(r => `
+    <div class="rider-card">
+      <div class="rider-photo">🏍️</div>
+      <div class="rider-info">
+        <div class="rider-name">${r.name}</div>
+        <div class="rider-status">${r.bike} · ${r.area}</div>
+      </div>
+      <span class="rider-badge ${r.statusClass}">${r.status}</span>
+    </div>
+  `).join('');
+}
+
+// ─── TAB FILTER ───
+function filterTab(el, cat) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  renderListings(cat);
+}
+
+function showListings(cat) {
+  document.getElementById('listings').scrollIntoView({ behavior: 'smooth' });
+  setTimeout(() => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab').forEach(t => {
+      if (t.textContent.toLowerCase().includes(cat) || t.onclick?.toString().includes(`'${cat}'`)) t.classList.add('active');
+    });
+    renderListings(cat);
+  }, 400);
+}
+
+// ─── MODALS ───
+const modals = {
+  signup: () => `
+    <div class="modal-header">
+      <h3>🎓 Create Student Account</h3>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">First Name</label><input class="form-input" placeholder="John"></div>
+      <div class="form-group"><label class="form-label">Last Name</label><input class="form-input" placeholder="Kamau"></div>
+    </div>
+    <div class="form-group"><label class="form-label">Student ID / Email</label><input class="form-input" placeholder="SCU/2024/001 or email@uni.ac.ke"></div>
+    <div class="form-group"><label class="form-label">M-Pesa Phone Number</label><input class="form-input" placeholder="0712 345 678" type="tel"></div>
+    <div class="form-group"><label class="form-label">University / College</label>
+      <select class="form-select"><option>Chuka University</option><option>KMTC Chuka</option><option>Other Nearby Institution</option></select>
+    </div>
+    <div class="form-group"><label class="form-label">Password</label><input class="form-input" placeholder="Create a strong password" type="password"></div>
+    <button class="pay-submit" onclick="submitForm('Welcome to UniConnect! 🎉','Your account has been created. Explore services near you.')">Create Account</button>
+    <p style="font-size:0.75rem;color:var(--text-muted);text-align:center;margin-top:0.75rem">By signing up you agree to our <a href="#" style="color:var(--primary)">Terms & Privacy Policy</a></p>
+  `,
+  login: () => `
+    <div class="modal-header">
+      <h3>👋 Welcome Back</h3>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="form-group"><label class="form-label">Phone / Email</label><input class="form-input" placeholder="0712 345 678 or email@uni.ac.ke"></div>
+    <div class="form-group"><label class="form-label">Password</label><input class="form-input" placeholder="Your password" type="password"></div>
+    <button class="pay-submit" onclick="submitForm('Logged in!','Welcome back. Redirecting you to your dashboard.')">Log In</button>
+    <p style="font-size:0.75rem;color:var(--text-muted);text-align:center;margin-top:0.75rem">No account? <a href="#" onclick="openModal('signup')" style="color:var(--primary)">Sign up free</a></p>
+  `,
+  business: () => `
+    <div class="modal-header">
+      <h3>🏪 Register Your Business</h3>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="form-group"><label class="form-label">Business Name</label><input class="form-input" placeholder="e.g. Mama Achieng's Kitchen"></div>
+    <div class="form-group"><label class="form-label">Business Type</label>
+      <select class="form-select">
+        <option>Restaurant / Hotel</option>
+        <option>Mama Mboga / Groceries</option>
+        <option>Hostel / Accommodation</option>
+        <option>Chemist / Pharmacy</option>
+        <option>Shop / Retail</option>
+        <option>Salon / Barbershop</option>
+        <option>Hospital / Clinic</option>
+        <option>Bank / M-Pesa Agent</option>
+        <option>Other</option>
+      </select>
+    </div>
+    <div class="form-group"><label class="form-label">Location / Address</label><input class="form-input" placeholder="Street address or landmark near campus"></div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Owner Name</label><input class="form-input" placeholder="Full name"></div>
+      <div class="form-group"><label class="form-label">M-Pesa Number</label><input class="form-input" placeholder="0712 345 678" type="tel"></div>
+    </div>
+    <div class="form-group"><label class="form-label">Paybill / Till Number (optional)</label><input class="form-input" placeholder="e.g. 174379"></div>
+    <div class="form-group"><label class="form-label">Accept Boda Deliveries?</label>
+      <select class="form-select"><option>Yes, enable delivery</option><option>No, walk-in only</option></select>
+    </div>
+    <button class="pay-submit" onclick="submitForm('Business Registered! 🎉','Your listing will be reviewed and published within 24 hours.')">Register Business</button>
+  `,
+  rider: () => `
+    <div class="modal-header">
+      <h3>🏍️ Register as a Rider</h3>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="form-group"><label class="form-label">Full Name</label><input class="form-input" placeholder="Your name"></div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Phone Number</label><input class="form-input" placeholder="0712 345 678" type="tel"></div>
+      <div class="form-group"><label class="form-label">ID Number</label><input class="form-input" placeholder="National ID"></div>
+    </div>
+    <div class="form-group"><label class="form-label">Bike Registration</label><input class="form-input" placeholder="e.g. KMZB 001A"></div>
+    <div class="form-group"><label class="form-label">Bike Model</label><input class="form-input" placeholder="e.g. Honda CG 125"></div>
+    <div class="form-group"><label class="form-label">Operating Area</label><input class="form-input" placeholder="e.g. Chuka Campus — Tharaka Nithi"></div>
+    <div class="form-group"><label class="form-label">M-Pesa Number (for earnings)</label><input class="form-input" placeholder="0712 345 678" type="tel"></div>
+    <button class="pay-submit" onclick="submitForm('Rider Registered! 🏍️','Your profile is under review. You\'ll start receiving jobs within 24 hrs.')">Join as Rider</button>
+  `,
+  ride: () => `
+    <div class="modal-header">
+      <h3>🏍️ Request a Boda Ride</h3>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="form-group"><label class="form-label">Pick-Up Location</label><input class="form-input" placeholder="Your current location or landmark"></div>
+    <div class="form-group"><label class="form-label">Drop-Off Location</label><input class="form-input" placeholder="Where are you going?"></div>
+    <div class="form-group"><label class="form-label">Ride Type</label>
+      <select class="form-select"><option>Personal Ride</option><option>Delivery / Errand</option></select>
+    </div>
+    <div class="form-group"><label class="form-label">Your M-Pesa Number</label><input class="form-input" placeholder="0712 345 678" type="tel"></div>
+    <div style="background:var(--dark3);border-radius:10px;padding:0.85rem;margin-bottom:1rem;font-size:0.82rem;color:var(--text-muted)">
+      📍 <strong style="color:var(--text)">3 riders nearby</strong> · Estimated: 2–5 minutes · Starting from KSh 50
+    </div>
+    <button class="pay-submit" onclick="submitForm('Ride Requested! 🏍️','A rider has been notified. You\'ll receive a confirmation call shortly.')">Request Rider</button>
+  `,
+  order: (name) => `
+    <div class="modal-header">
+      <h3>🛵 Order from ${name||'Business'}</h3>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="form-group"><label class="form-label">Your Order</label><textarea class="form-input" placeholder="What would you like to order?" style="height:80px;resize:none"></textarea></div>
+    <div class="form-group"><label class="form-label">Delivery Address</label><input class="form-input" placeholder="Your hostel / room number / landmark"></div>
+    <div class="form-group"><label class="form-label">M-Pesa Number</label><input class="form-input" placeholder="0712 345 678" type="tel"></div>
+    <div style="background:var(--dark3);border-radius:10px;padding:0.85rem;margin-bottom:1rem;font-size:0.82rem;">
+      🚀 <strong>Boda delivery available</strong> · Delivery fee from <strong style="color:var(--primary)">KSh 50</strong>
+    </div>
+    <button class="pay-submit" onclick="submitForm('Order Placed! 🎉','Your order is confirmed. M-Pesa prompt will be sent shortly.')">Place Order & Pay</button>
+  `,
+  bookHostel: (name) => `
+    <div class="modal-header">
+      <h3>🏠 Book: ${name||'Hostel'}</h3>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="form-group"><label class="form-label">Full Name</label><input class="form-input" placeholder="Your full name"></div>
+    <div class="form-group"><label class="form-label">Student ID</label><input class="form-input" placeholder="SCU/2024/001"></div>
+    <div class="form-group"><label class="form-label">M-Pesa Number</label><input class="form-input" placeholder="0712 345 678" type="tel"></div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Move-In Date</label><input class="form-input" type="date"></div>
+      <div class="form-group"><label class="form-label">Duration</label><select class="form-select"><option>1 Month</option><option>3 Months</option><option>6 Months</option><option>1 Year</option></select></div>
+    </div>
+    <div class="form-group"><label class="form-label">Message to Owner</label><textarea class="form-input" placeholder="Any special requirements?" style="height:70px;resize:none"></textarea></div>
+    <button class="pay-submit" onclick="submitForm('Booking Submitted! 🏠','The hostel owner will contact you within 2 hours.')">Submit Booking Request</button>
+  `,
+  hostel: () => `
+    <div class="modal-header">
+      <h3>🏠 List Your Hostel</h3>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="form-group"><label class="form-label">Hostel Name</label><input class="form-input" placeholder="e.g. Greenview Student Hostels"></div>
+    <div class="form-group"><label class="form-label">Location</label><input class="form-input" placeholder="Address and distance from campus"></div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Room Type</label><select class="form-select"><option>Single Room</option><option>Bedsitter</option><option>Self-Contain</option><option>Shared</option></select></div>
+      <div class="form-group"><label class="form-label">Price per Month (KSh)</label><input class="form-input" placeholder="e.g. 3500" type="number"></div>
+    </div>
+    <div class="form-group"><label class="form-label">Amenities (check all that apply)</label>
+      <div style="display:flex;flex-wrap:wrap;gap:0.5rem;margin-top:0.5rem">
+        ${['WiFi','Water','Security','CCTV','Kitchen','Parking','Cleaning'].map(a=>`<label style="display:flex;align-items:center;gap:0.3rem;font-size:0.82rem;cursor:pointer"><input type="checkbox"> ${a}</label>`).join('')}
+      </div>
+    </div>
+    <div class="form-group"><label class="form-label">Owner M-Pesa Number</label><input class="form-input" placeholder="0712 345 678" type="tel"></div>
+    <button class="pay-submit" onclick="submitForm('Hostel Listed! 🏠','Your hostel will appear in search results within 24 hours.')">Submit Listing</button>
+  `,
+};
+
+function openModal(type, param) {
+  const overlay = document.getElementById('modalOverlay');
+  const content = document.getElementById('modalContent');
+  const fn = modals[type];
+  if (!fn) return;
+  content.innerHTML = fn(param);
+  overlay.classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeModal() {
+  document.getElementById('modalOverlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+function closeModalOnBg(e) {
+  if (e.target === document.getElementById('modalOverlay')) closeModal();
+}
+
+function submitForm(title, body) {
+  closeModal();
+  showToast('✅', title, body);
+}
+
+// ─── TOAST ───
+function showToast(icon, title, body) {
+  const toast = document.getElementById('toast');
+  document.getElementById('toastIcon').textContent = icon;
+  document.getElementById('toastTitle').textContent = title;
+  document.getElementById('toastBody').textContent = body;
+  toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), 4000);
+}
+
+// ─── M-PESA SIMULATION ───
+function simulateMpesa() {
+  const phone = document.getElementById('mpesaPhone')?.value;
+  if (!phone || phone.length < 9) {
+    showToast('⚠️', 'Enter Phone Number', 'Please enter a valid Safaricom number first.'); return;
+  }
+  showToast('📱', 'M-Pesa Prompt Sent!', `Check your phone (${phone}) for the M-Pesa PIN prompt.`);
+}
+
+// ─── MOBILE MENU ───
+function toggleMobileMenu() {
+  document.getElementById('mobileMenu').classList.toggle('open');
+}
+
+// ─── SCROLL REVEAL ───
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+}, { threshold: 0.1 });
+document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+// ─── NAVBAR SCROLL ───
+window.addEventListener('scroll', () => {
+  document.getElementById('navbar').style.background =
+    window.scrollY > 50 ? 'rgba(10,15,13,0.98)' : 'rgba(10,15,13,0.85)';
+});
+
+// ─── INIT ───
+renderListings('all');
+renderHostels();
+renderRiders();
+</script>
+</body>
+</html>
