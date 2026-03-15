@@ -3,19 +3,16 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ChukaConnect — Your Campus Ecosystem</title>
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+<title>ChukaConnect — Campus Ecosystem</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 
-<!-- ─── FIREBASE SDK ─── -->
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
   import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-analytics.js";
   import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged }
     from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-  import { getFirestore, collection, addDoc, getDocs, query, orderBy, serverTimestamp, where }
+  import { getFirestore, collection, addDoc, getDocs, getDoc, doc, updateDoc, query, orderBy, serverTimestamp, where, deleteDoc }
     from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-  import { getStorage, ref, uploadBytesResumable, getDownloadURL }
-    from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyCPTeMioI10_3LXqcRDzjf8lQtiGUCAWVA",
@@ -31,1017 +28,832 @@
   const analytics = getAnalytics(app);
   const auth = getAuth(app);
   const db = getFirestore(app);
-  const storage = getStorage(app);
 
-  // ─── Make Firebase available globally ───
   window.fbAuth = auth;
   window.fbDb = db;
-  window.fbStorage = storage;
-  window.fbFns = {
-    createUserWithEmailAndPassword,
-    signInWithEmailAndPassword,
-    signOut,
-    onAuthStateChanged,
-    collection, addDoc, getDocs, query, orderBy, serverTimestamp, where,
-    ref, uploadBytesResumable, getDownloadURL
-  };
+  window.fbFns = { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, collection, addDoc, getDocs, getDoc, doc, updateDoc, query, orderBy, serverTimestamp, where, deleteDoc };
 
-  // ─── Auth State Listener ───
-  onAuthStateChanged(auth, (user) => {
-    if (user) {
-      document.getElementById('navUserName').textContent = user.displayName || user.email.split('@')[0];
-      document.getElementById('navLoggedOut').style.display = 'none';
-      document.getElementById('navLoggedIn').style.display = 'flex';
-    } else {
-      document.getElementById('navLoggedOut').style.display = 'flex';
-      document.getElementById('navLoggedIn').style.display = 'none';
-    }
-    // Load listings after auth state known
-    loadListings('all');
-    loadHostels();
+  onAuthStateChanged(auth, async (user) => {
+    if (!user) { showPage('landing'); return; }
+    try {
+      const q = query(collection(db,'users'), where('uid','==',user.uid));
+      const snap = await getDocs(q);
+      if (!snap.empty) {
+        const profile = snap.docs[0].data();
+        window.currentUser = { ...profile, docId: snap.docs[0].id };
+        routeToDashboard(profile.role);
+      } else {
+        window.currentUser = { uid: user.uid, email: user.email };
+        showPage('landing');
+      }
+    } catch(e) { showPage('landing'); }
   });
 </script>
 
 <style>
-  :root {
-    --primary: #6C63FF;
-    --primary-dark: #4B44CC;
-    --primary-light: #A89DFF;
-    --accent: #38BDF8;
-    --accent2: #A855F7;
-    --dark: #09090F;
-    --dark2: #0F0F1A;
-    --dark3: #161628;
-    --card: #12121F;
-    --text: #EEF0FF;
-    --text-muted: #7B82A8;
-    --text-dim: #3D4170;
-    --border: rgba(108,99,255,0.18);
-    --border-hover: rgba(108,99,255,0.45);
-    --glow: 0 0 30px rgba(108,99,255,0.25);
-    --shadow: 0 8px 32px rgba(0,0,0,0.5);
-    --radius: 16px;
-  }
-  * { margin:0; padding:0; box-sizing:border-box; }
-  html { scroll-behavior:smooth; }
-  body { font-family:'DM Sans',sans-serif; background:var(--dark); color:var(--text); overflow-x:hidden; line-height:1.6; }
-  ::-webkit-scrollbar { width:6px; }
-  ::-webkit-scrollbar-track { background:var(--dark2); }
-  ::-webkit-scrollbar-thumb { background:var(--primary-dark); border-radius:3px; }
+:root{--primary:#6C63FF;--primary-dark:#4B44CC;--primary-light:#A89DFF;--accent:#38BDF8;--accent2:#A855F7;--green:#22C55E;--red:#EF4444;--orange:#F97316;--dark:#09090F;--dark2:#0F0F1A;--dark3:#161628;--card:#12121F;--text:#EEF0FF;--text-muted:#7B82A8;--text-dim:#3D4170;--border:rgba(108,99,255,0.18);--border-hover:rgba(108,99,255,0.45);--glow:0 0 30px rgba(108,99,255,0.2);--shadow:0 8px 32px rgba(0,0,0,0.5);--radius:16px;}
+*{margin:0;padding:0;box-sizing:border-box;}html{scroll-behavior:smooth;}
+body{font-family:'DM Sans',sans-serif;background:var(--dark);color:var(--text);overflow-x:hidden;line-height:1.6;}
+::-webkit-scrollbar{width:5px;}::-webkit-scrollbar-track{background:var(--dark2);}::-webkit-scrollbar-thumb{background:var(--primary-dark);border-radius:3px;}
+.page{display:none;min-height:100vh;}.page.active{display:block;}
+.btn{display:inline-flex;align-items:center;gap:0.4rem;padding:0.6rem 1.3rem;border-radius:10px;font-family:'DM Sans',sans-serif;font-size:0.88rem;font-weight:500;cursor:pointer;border:none;text-decoration:none;transition:all 0.25s;}
+.btn-primary{background:var(--primary);color:#fff;font-weight:600;}.btn-primary:hover{background:var(--primary-light);transform:translateY(-1px);}
+.btn-outline{background:transparent;border:1.5px solid var(--border-hover);color:var(--text);}.btn-outline:hover{border-color:var(--primary);color:var(--primary);}
+.btn-green{background:var(--green);color:#fff;font-weight:600;}.btn-red{background:var(--red);color:#fff;font-weight:600;}.btn-orange{background:var(--orange);color:#fff;font-weight:600;}
+.btn-lg{padding:0.9rem 2rem;font-size:1rem;border-radius:12px;}.btn-sm{padding:0.35rem 0.8rem;font-size:0.78rem;border-radius:7px;}.btn:disabled{opacity:0.6;cursor:not-allowed!important;transform:none!important;}
+.form-group{margin-bottom:1rem;}.form-label{font-size:0.82rem;font-weight:500;color:var(--text-muted);margin-bottom:0.4rem;display:block;}
+.form-input{width:100%;background:var(--dark3);border:1.5px solid var(--border);border-radius:10px;padding:0.75rem 1rem;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.9rem;outline:none;transition:border-color 0.2s;}.form-input:focus{border-color:var(--primary);}.form-input::placeholder{color:var(--text-dim);}
+.form-select{width:100%;background:var(--dark3);border:1.5px solid var(--border);border-radius:10px;padding:0.75rem 1rem;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.9rem;outline:none;appearance:none;cursor:pointer;}.form-select:focus{border-color:var(--primary);}
+.form-textarea{width:100%;background:var(--dark3);border:1.5px solid var(--border);border-radius:10px;padding:0.75rem 1rem;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.9rem;outline:none;resize:none;height:90px;}.form-textarea:focus{border-color:var(--primary);}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;}.form-error{font-size:0.78rem;color:var(--red);margin-top:0.4rem;display:none;padding:0.5rem 0.75rem;background:rgba(239,68,68,0.1);border-radius:8px;}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:1.5rem;}
+.dash-shell{display:flex;min-height:100vh;}
+.sidebar{width:260px;background:var(--dark2);border-right:1px solid var(--border);padding:1.5rem 1rem;display:flex;flex-direction:column;gap:0.25rem;position:fixed;top:0;bottom:0;left:0;overflow-y:auto;z-index:100;transition:transform 0.3s;}
+.sidebar-logo{font-family:'Syne',sans-serif;font-size:1.3rem;font-weight:800;color:var(--primary);padding:0.5rem 0.75rem 1.25rem;}
+.sidebar-logo span{color:var(--text);}
+.sidebar-section{font-size:0.7rem;font-weight:600;text-transform:uppercase;letter-spacing:0.1em;color:var(--text-dim);padding:0.75rem 0.75rem 0.25rem;margin-top:0.5rem;}
+.nav-item{display:flex;align-items:center;gap:0.75rem;padding:0.65rem 0.75rem;border-radius:10px;cursor:pointer;color:var(--text-muted);font-size:0.88rem;font-weight:500;transition:all 0.2s;border:none;background:none;width:100%;text-align:left;}
+.nav-item:hover{background:rgba(108,99,255,0.08);color:var(--text);}.nav-item.active{background:rgba(108,99,255,0.15);color:var(--primary);font-weight:600;}
+.nav-icon{font-size:1.1rem;width:22px;text-align:center;}.nav-badge{background:var(--red);color:#fff;font-size:0.65rem;font-weight:700;padding:0.1rem 0.4rem;border-radius:100px;margin-left:auto;}
+.sidebar-bottom{margin-top:auto;padding-top:1rem;border-top:1px solid var(--border);}
+.sidebar-user{display:flex;align-items:center;gap:0.75rem;padding:0.75rem;}
+.user-avatar{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--primary),var(--accent2));display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.9rem;flex-shrink:0;}
+.user-name{font-size:0.85rem;font-weight:600;line-height:1.2;}.user-role{font-size:0.7rem;color:var(--text-muted);}
+.dash-main{margin-left:260px;flex:1;padding:2rem;min-height:100vh;}
+.dash-panel{display:none;}.dash-panel.active{display:block;}
+.dash-header{margin-bottom:2rem;}.dash-header h1{font-family:'Syne',sans-serif;font-size:1.8rem;font-weight:800;margin-bottom:0.25rem;}.dash-header p{color:var(--text-muted);font-size:0.9rem;}
+.stats-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1rem;margin-bottom:2rem;}
+.stat-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:1.25rem;}
+.stat-num{font-family:'Syne',sans-serif;font-size:2rem;font-weight:800;color:var(--primary);line-height:1;}.stat-label{font-size:0.78rem;color:var(--text-muted);margin-top:0.25rem;}
+.stat-card.green .stat-num{color:var(--green);}.stat-card.orange .stat-num{color:var(--orange);}.stat-card.blue .stat-num{color:var(--accent);}
+.listings-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(255px,1fr));gap:1.25rem;}
+.listing-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;transition:all 0.3s;}
+.listing-card:hover{border-color:var(--border-hover);transform:translateY(-3px);box-shadow:var(--glow);}
+.lcard-img{height:150px;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;background:var(--dark3);}
+.lcard-img img{width:100%;height:100%;object-fit:cover;}.emoji-big{font-size:3rem;}
+.pill{position:absolute;top:8px;right:8px;padding:0.18rem 0.55rem;border-radius:100px;font-size:0.65rem;font-weight:700;}
+.pill-approved{background:rgba(34,197,94,0.2);color:var(--green);}.pill-pending{background:rgba(249,115,22,0.2);color:var(--orange);}
+.pill-open{background:rgba(108,99,255,0.2);color:var(--primary);}.pill-rejected{background:rgba(239,68,68,0.2);color:var(--red);}
+.lcard-body{padding:1rem;}.lcard-body h4{font-family:'Syne',sans-serif;font-size:0.93rem;font-weight:700;margin-bottom:0.2rem;}
+.lcard-sub{font-size:0.77rem;color:var(--text-muted);margin-bottom:0.5rem;}.lcard-actions{display:flex;gap:0.5rem;margin-top:0.75rem;flex-wrap:wrap;}
+.upload-area{border:2px dashed var(--border);border-radius:12px;padding:1.25rem;text-align:center;cursor:pointer;transition:all 0.2s;position:relative;background:var(--dark3);}
+.upload-area:hover{border-color:var(--primary);background:rgba(108,99,255,0.05);}
+.upload-area input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
+.img-preview{width:100%;height:130px;object-fit:cover;border-radius:10px;margin-top:0.75rem;display:none;}
+.progress-wrap{display:none;margin-top:0.75rem;}.progress-track{background:var(--dark2);border-radius:100px;height:6px;overflow:hidden;}
+.progress-fill{height:100%;background:linear-gradient(90deg,var(--primary),var(--accent2));border-radius:100px;transition:width 0.3s;width:0%;}
+.progress-label{font-size:0.72rem;color:var(--text-muted);margin-top:0.3rem;text-align:center;}
+.amenities-wrap{display:flex;flex-wrap:wrap;gap:0.5rem;margin-top:0.5rem;}
+.amenity-label{display:flex;align-items:center;gap:0.4rem;font-size:0.82rem;cursor:pointer;background:var(--dark3);border:1px solid var(--border);padding:0.3rem 0.7rem;border-radius:8px;transition:all 0.2s;}
+.amenity-label input{accent-color:var(--primary);}.amenity-label:hover{border-color:var(--primary);}
+.data-table{width:100%;border-collapse:collapse;font-size:0.85rem;}
+.data-table th{text-align:left;padding:0.75rem 1rem;font-size:0.72rem;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;border-bottom:1px solid var(--border);}
+.data-table td{padding:0.85rem 1rem;border-bottom:1px solid rgba(108,99,255,0.07);vertical-align:middle;}
+.data-table tr:hover td{background:rgba(108,99,255,0.04);}
+.status-badge{padding:0.2rem 0.6rem;border-radius:100px;font-size:0.72rem;font-weight:700;display:inline-block;}
+.empty{text-align:center;padding:3rem 1rem;color:var(--text-muted);grid-column:1/-1;}
+.empty .ei{font-size:3rem;margin-bottom:0.75rem;}.empty p{font-size:0.9rem;margin-bottom:1rem;}
+.spinner{display:inline-block;width:20px;height:20px;border:2px solid rgba(108,99,255,0.3);border-top-color:var(--primary);border-radius:50%;animation:spin 0.8s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.loading-block{text-align:center;padding:3rem;color:var(--text-muted);grid-column:1/-1;}
+.toast{position:fixed;bottom:2rem;right:2rem;z-index:3000;background:var(--card);border:1px solid var(--primary);border-radius:12px;padding:1rem 1.5rem;display:flex;align-items:center;gap:0.75rem;box-shadow:var(--shadow);max-width:340px;transform:translateX(120%);transition:transform 0.4s cubic-bezier(0.34,1.56,0.64,1);}
+.toast.show{transform:translateX(0);}.toast-msg strong{display:block;font-weight:600;font-size:0.9rem;}.toast-msg span{font-size:0.82rem;color:var(--text-muted);}
 
-  /* ─── NAV ─── */
-  nav {
-    position:fixed; top:0; left:0; right:0; z-index:1000;
-    display:flex; align-items:center; justify-content:space-between;
-    padding:1rem 2rem;
-    background:rgba(9,9,15,0.9); backdrop-filter:blur(20px);
-    border-bottom:1px solid var(--border);
-  }
-  .nav-logo { font-family:'Syne',sans-serif; font-size:1.5rem; font-weight:800; color:var(--primary); text-decoration:none; }
-  .nav-logo span { color:var(--text); }
-  .nav-links { display:flex; gap:0.25rem; list-style:none; }
-  .nav-links a { color:var(--text-muted); text-decoration:none; font-size:0.88rem; font-weight:500; padding:0.45rem 0.8rem; border-radius:8px; transition:all 0.2s; }
-  .nav-links a:hover { color:var(--primary); background:rgba(108,99,255,0.08); }
-  .nav-right { display:flex; gap:0.75rem; align-items:center; }
-  .nav-user { display:flex; align-items:center; gap:0.75rem; }
-  .nav-avatar { width:32px; height:32px; border-radius:50%; background:linear-gradient(135deg,var(--primary),var(--accent2)); display:flex; align-items:center; justify-content:center; font-size:0.8rem; font-weight:700; }
-  .nav-username { font-size:0.88rem; font-weight:600; }
+/* LANDING */
+#page-landing{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:1.5rem;background:var(--dark);}
+.landing-wrap{width:100%;max-width:420px;position:relative;z-index:1;}
+.landing-logo{font-family:'Syne',sans-serif;font-size:2rem;font-weight:800;color:var(--primary);text-align:center;margin-bottom:0.35rem;}
+.landing-logo span{color:var(--text);}
+.landing-tag{text-align:center;color:var(--text-muted);font-size:0.88rem;margin-bottom:1.75rem;}
+.auth-tabs{display:flex;background:var(--dark2);border-radius:12px;padding:4px;margin-bottom:1.5rem;}
+.auth-tab{flex:1;padding:0.6rem;text-align:center;border-radius:9px;cursor:pointer;font-size:0.88rem;font-weight:500;color:var(--text-muted);border:none;background:none;transition:all 0.2s;}
+.auth-tab.active{background:var(--primary);color:#fff;font-weight:600;}
+.auth-panel{display:none;}.auth-panel.active{display:block;}
+.role-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:0.75rem;margin-bottom:1.25rem;}
+.role-card{background:var(--dark3);border:2px solid var(--border);border-radius:12px;padding:1rem 0.5rem;text-align:center;cursor:pointer;transition:all 0.2s;}
+.role-card:hover,.role-card.selected{border-color:var(--primary);background:rgba(108,99,255,0.1);}
+.role-icon{font-size:1.8rem;margin-bottom:0.4rem;}.role-name{font-size:0.78rem;font-weight:600;color:var(--text-muted);}
+.role-card.selected .role-name{color:var(--primary);}
+.submit-btn{width:100%;background:var(--primary);border:none;border-radius:10px;padding:0.9rem;color:#fff;font-family:'Syne',sans-serif;font-weight:700;font-size:0.95rem;cursor:pointer;transition:all 0.2s;margin-top:0.25rem;}
+.submit-btn:hover{background:var(--primary-light);}.submit-btn:disabled{opacity:0.6;cursor:not-allowed;}
 
-  .btn { display:inline-flex; align-items:center; gap:0.4rem; padding:0.6rem 1.3rem; border-radius:10px; font-family:'DM Sans',sans-serif; font-size:0.88rem; font-weight:500; cursor:pointer; border:none; text-decoration:none; transition:all 0.25s; }
-  .btn-outline { background:transparent; border:1.5px solid var(--border-hover); color:var(--text); }
-  .btn-outline:hover { border-color:var(--primary); color:var(--primary); }
-  .btn-primary { background:var(--primary); color:#fff; font-weight:600; box-shadow:0 4px 20px rgba(108,99,255,0.3); }
-  .btn-primary:hover { background:var(--primary-light); transform:translateY(-1px); }
-  .btn-danger { background:#EF4444; color:#fff; font-weight:600; }
-  .btn-lg { padding:0.85rem 2rem; font-size:1rem; border-radius:12px; }
+.sidebar-toggle{display:none;position:fixed;top:1rem;left:1rem;z-index:200;background:var(--card);border:1px solid var(--border);border-radius:10px;width:40px;height:40px;align-items:center;justify-content:center;cursor:pointer;font-size:1.2rem;border:none;}
+.sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:99;}
 
-  .hamburger { display:none; flex-direction:column; gap:5px; cursor:pointer; padding:8px; background:none; border:none; }
-  .hamburger span { width:24px; height:2px; background:var(--text); display:block; border-radius:2px; }
-
-  /* ─── HERO ─── */
-  .hero { min-height:100vh; display:flex; align-items:center; padding:7rem 2rem 4rem; position:relative; overflow:hidden; }
-  .hero-bg { position:absolute; inset:0; background: radial-gradient(ellipse 80% 60% at 60% 40%, rgba(108,99,255,0.15) 0%, transparent 70%), radial-gradient(ellipse 50% 40% at 10% 80%, rgba(168,85,247,0.1) 0%, transparent 60%); }
-  .hero-grid { position:absolute; inset:0; background-image:linear-gradient(rgba(108,99,255,0.04) 1px, transparent 1px),linear-gradient(90deg, rgba(108,99,255,0.04) 1px, transparent 1px); background-size:60px 60px; mask-image:radial-gradient(ellipse 80% 80% at 50% 50%, black 30%, transparent 100%); }
-  .hero-content { max-width:700px; margin:0 auto; position:relative; z-index:1; text-align:center; }
-  .hero-badge { display:inline-flex; align-items:center; gap:0.5rem; background:rgba(108,99,255,0.1); border:1px solid var(--border); padding:0.35rem 1rem; border-radius:100px; font-size:0.8rem; font-weight:500; color:var(--primary); margin-bottom:1.5rem; }
-  .dot { width:6px; height:6px; background:var(--primary); border-radius:50%; animation:pulse 2s infinite; }
-  @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(1.3)} }
-  h1 { font-family:'Syne',sans-serif; font-size:clamp(2.2rem,5vw,3.4rem); font-weight:800; line-height:1.1; margin-bottom:1.25rem; }
-  .highlight { color:var(--primary); }
-  .hero-desc { color:var(--text-muted); font-size:1.05rem; max-width:500px; margin:0 auto 2rem; }
-  .hero-actions { display:flex; gap:1rem; flex-wrap:wrap; justify-content:center; }
-  .hero-stats { display:flex; gap:2.5rem; margin-top:3rem; justify-content:center; flex-wrap:wrap; }
-  .stat-num { font-family:'Syne',sans-serif; font-size:1.8rem; font-weight:800; color:var(--primary); line-height:1; }
-  .stat-label { font-size:0.75rem; color:var(--text-muted); }
-
-  /* ─── SECTIONS ─── */
-  section { padding:5rem 2rem; }
-  .section-inner { max-width:1200px; margin:0 auto; }
-  .section-tag { display:inline-flex; align-items:center; gap:0.4rem; color:var(--primary); font-size:0.8rem; font-weight:600; text-transform:uppercase; letter-spacing:0.1em; margin-bottom:0.75rem; }
-  .section-tag::before { content:''; display:block; width:20px; height:2px; background:var(--primary); border-radius:1px; }
-  h2 { font-family:'Syne',sans-serif; font-size:clamp(1.8rem,3.5vw,2.5rem); font-weight:800; line-height:1.15; margin-bottom:1rem; }
-  h2 em { font-style:normal; color:var(--primary); }
-  .section-desc { color:var(--text-muted); font-size:1rem; max-width:520px; line-height:1.7; }
-
-  /* ─── FIREBASE SETUP BANNER ─── */
-  .setup-banner {
-    background:linear-gradient(135deg, rgba(108,99,255,0.15), rgba(168,85,247,0.15));
-    border:1.5px solid var(--primary);
-    border-radius:var(--radius); padding:1.5rem 2rem;
-    margin:6rem 2rem 0; max-width:900px; margin-left:auto; margin-right:auto;
-    position:relative; z-index:10;
-  }
-  .setup-banner h3 { font-family:'Syne',sans-serif; font-size:1.1rem; font-weight:700; color:var(--primary); margin-bottom:0.75rem; }
-  .setup-steps { display:flex; flex-direction:column; gap:0.5rem; }
-  .setup-step { display:flex; align-items:flex-start; gap:0.75rem; font-size:0.85rem; }
-  .step-badge { background:var(--primary); color:#fff; font-weight:700; font-size:0.72rem; padding:0.15rem 0.5rem; border-radius:4px; flex-shrink:0; margin-top:2px; }
-  .setup-step a { color:var(--accent); }
-  .setup-step code { background:var(--dark3); padding:0.1rem 0.4rem; border-radius:4px; font-size:0.8rem; color:var(--primary-light); }
-
-  /* ─── TABS ─── */
-  .tabs { display:flex; gap:0.5rem; flex-wrap:wrap; margin-bottom:2rem; }
-  .tab { padding:0.5rem 1.1rem; border-radius:8px; font-size:0.85rem; font-weight:500; cursor:pointer; border:1.5px solid var(--border); background:transparent; color:var(--text-muted); transition:all 0.2s; }
-  .tab.active,.tab:hover { background:var(--primary); color:#fff; border-color:var(--primary); font-weight:600; }
-
-  /* ─── CARDS ─── */
-  .listings-grid,.hostel-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(270px,1fr)); gap:1.25rem; }
-  .listing-card,.hostel-card { background:var(--card); border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; transition:all 0.3s; cursor:pointer; }
-  .listing-card:hover,.hostel-card:hover { border-color:var(--border-hover); transform:translateY(-4px); box-shadow:var(--glow); }
-
-  .card-img { height:160px; display:flex; align-items:center; justify-content:center; position:relative; background:var(--dark3); overflow:hidden; }
-  .card-img img { width:100%; height:100%; object-fit:cover; }
-  .card-img .emoji-fallback { font-size:3.5rem; }
-  .card-img .status-pill { position:absolute; top:10px; right:10px; padding:0.2rem 0.6rem; border-radius:100px; font-size:0.68rem; font-weight:600; }
-  .badge-open { background:rgba(108,99,255,0.18); color:var(--primary); }
-  .badge-delivery { background:rgba(56,189,248,0.15); color:var(--accent); }
-  .card-body { padding:1rem 1.1rem; }
-  .card-body h4 { font-family:'Syne',sans-serif; font-size:0.95rem; font-weight:700; margin-bottom:0.2rem; }
-  .card-sub { font-size:0.78rem; color:var(--text-muted); margin-bottom:0.75rem; }
-  .card-meta { display:flex; align-items:center; justify-content:space-between; }
-  .rating { display:flex; align-items:center; gap:0.25rem; font-size:0.78rem; color:#FFD600; }
-  .distance { font-size:0.72rem; color:var(--text-muted); }
-
-  .hostel-features { display:flex; gap:0.4rem; flex-wrap:wrap; margin:0.5rem 0; }
-  .hostel-tag { background:var(--dark3); border:1px solid var(--border); padding:0.15rem 0.5rem; border-radius:6px; font-size:0.68rem; color:var(--text-muted); }
-  .hostel-price { font-family:'Syne',sans-serif; font-weight:700; font-size:1rem; color:var(--primary); }
-  .hostel-price span { font-size:0.7rem; font-weight:400; color:var(--text-muted); font-family:'DM Sans',sans-serif; }
-
-  /* ─── SERVICES ─── */
-  .services-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:1.25rem; margin-top:2.5rem; }
-  .service-card { background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:1.75rem; transition:all 0.3s; cursor:pointer; }
-  .service-card:hover { border-color:var(--border-hover); transform:translateY(-4px); box-shadow:var(--glow); }
-  .service-icon { width:52px; height:52px; border-radius:14px; display:flex; align-items:center; justify-content:center; font-size:1.6rem; margin-bottom:1.25rem; }
-  .icon-purple { background:rgba(108,99,255,0.15); }
-  .icon-blue { background:rgba(56,189,248,0.15); }
-  .icon-violet { background:rgba(168,85,247,0.15); }
-  .service-card h3 { font-family:'Syne',sans-serif; font-size:1.05rem; font-weight:700; margin-bottom:0.4rem; }
-  .service-card p { font-size:0.85rem; color:var(--text-muted); line-height:1.6; }
-
-  /* ─── PAYMENT ─── */
-  .payment-section { background:var(--dark2); }
-  .payment-content { display:grid; grid-template-columns:1fr 1fr; gap:4rem; align-items:center; }
-  .pay-method { background:var(--card); border:1px solid var(--border); border-radius:14px; padding:1.1rem 1.4rem; display:flex; align-items:center; gap:1rem; margin-bottom:0.85rem; }
-  .pay-icon { width:44px; height:44px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:1.4rem; flex-shrink:0; }
-  .pay-mpesa { background:rgba(108,99,255,0.15); color:var(--primary); font-size:0.65rem; font-weight:700; text-align:center; line-height:1.2; }
-  .pay-info h4 { font-size:0.9rem; font-weight:600; margin-bottom:0.1rem; }
-  .pay-info p { font-size:0.78rem; color:var(--text-muted); }
-  .pay-check { color:var(--primary); margin-left:auto; font-size:1.2rem; }
-  .payment-visual { background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:2rem; box-shadow:var(--glow); }
-  .pay-card-mock { background:linear-gradient(135deg,#4B44CC,#1A0A4A); border-radius:14px; padding:1.5rem; margin-bottom:1.5rem; }
-  .pay-card-label { font-size:0.7rem; opacity:0.7; margin-bottom:0.25rem; }
-  .pay-card-amount { font-family:'Syne',sans-serif; font-size:2rem; font-weight:800; }
-  .pay-card-row { display:flex; justify-content:space-between; margin-top:1rem; font-size:0.75rem; opacity:0.7; }
-  .pay-form { display:flex; flex-direction:column; gap:0.75rem; }
-  .pay-input { background:var(--dark3); border:1px solid var(--border); border-radius:10px; padding:0.75rem 1rem; color:var(--text); font-family:'DM Sans',sans-serif; font-size:0.88rem; outline:none; transition:border-color 0.2s; }
-  .pay-input:focus { border-color:var(--primary); }
-  .pay-input::placeholder { color:var(--text-dim); }
-  .pay-submit { background:var(--primary); border:none; border-radius:10px; padding:0.85rem; color:#fff; font-family:'Syne',sans-serif; font-weight:700; font-size:0.95rem; cursor:pointer; transition:all 0.2s; display:flex; align-items:center; justify-content:center; gap:0.5rem; }
-  .pay-submit:hover { background:var(--primary-light); transform:translateY(-1px); }
-
-  /* ─── MODAL ─── */
-  .modal-overlay { position:fixed; inset:0; z-index:2000; background:rgba(0,0,0,0.85); backdrop-filter:blur(8px); display:flex; align-items:center; justify-content:center; padding:1rem; opacity:0; pointer-events:none; transition:opacity 0.3s; }
-  .modal-overlay.open { opacity:1; pointer-events:all; }
-  .modal { background:var(--card); border:1px solid var(--border); border-radius:20px; padding:2rem; width:100%; max-width:460px; transform:translateY(20px); transition:transform 0.3s; max-height:92vh; overflow-y:auto; }
-  .modal-overlay.open .modal { transform:translateY(0); }
-  .modal-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem; }
-  .modal-header h3 { font-family:'Syne',sans-serif; font-size:1.25rem; font-weight:700; }
-  .modal-close { width:32px; height:32px; border-radius:8px; background:var(--dark3); border:none; color:var(--text); cursor:pointer; font-size:1.1rem; display:flex; align-items:center; justify-content:center; }
-
-  .form-group { margin-bottom:1rem; }
-  .form-label { font-size:0.82rem; font-weight:500; color:var(--text-muted); margin-bottom:0.4rem; display:block; }
-  .form-input { width:100%; background:var(--dark3); border:1.5px solid var(--border); border-radius:10px; padding:0.75rem 1rem; color:var(--text); font-family:'DM Sans',sans-serif; font-size:0.9rem; outline:none; transition:border-color 0.2s; }
-  .form-input:focus { border-color:var(--primary); }
-  .form-input::placeholder { color:var(--text-dim); }
-  .form-select { width:100%; background:var(--dark3); border:1.5px solid var(--border); border-radius:10px; padding:0.75rem 1rem; color:var(--text); font-family:'DM Sans',sans-serif; font-size:0.9rem; outline:none; cursor:pointer; appearance:none; }
-  .form-row { display:grid; grid-template-columns:1fr 1fr; gap:0.75rem; }
-  .form-textarea { width:100%; background:var(--dark3); border:1.5px solid var(--border); border-radius:10px; padding:0.75rem 1rem; color:var(--text); font-family:'DM Sans',sans-serif; font-size:0.9rem; outline:none; resize:none; height:80px; }
-  .form-textarea:focus { border-color:var(--primary); }
-
-  /* ─── IMAGE UPLOAD ─── */
-  .image-upload-area {
-    border:2px dashed var(--border); border-radius:12px; padding:1.5rem;
-    text-align:center; cursor:pointer; transition:all 0.2s; position:relative;
-    background:var(--dark3);
-  }
-  .image-upload-area:hover { border-color:var(--primary); background:rgba(108,99,255,0.05); }
-  .image-upload-area input[type=file] { position:absolute; inset:0; opacity:0; cursor:pointer; width:100%; height:100%; }
-  .image-upload-area .upload-icon { font-size:2rem; margin-bottom:0.5rem; }
-  .image-upload-area p { font-size:0.82rem; color:var(--text-muted); }
-  .image-upload-area .upload-hint { font-size:0.72rem; color:var(--text-dim); margin-top:0.25rem; }
-  .image-preview { width:100%; height:140px; object-fit:cover; border-radius:10px; margin-top:0.75rem; display:none; }
-
-  /* ─── PROGRESS BAR ─── */
-  .upload-progress { display:none; margin-top:0.75rem; }
-  .progress-bar-wrap { background:var(--dark2); border-radius:100px; height:6px; overflow:hidden; }
-  .progress-bar-fill { height:100%; background:linear-gradient(90deg,var(--primary),var(--accent2)); border-radius:100px; transition:width 0.3s; width:0%; }
-  .progress-label { font-size:0.72rem; color:var(--text-muted); margin-top:0.3rem; text-align:center; }
-
-  /* ─── AMENITIES CHECKBOXES ─── */
-  .amenities-grid { display:flex; flex-wrap:wrap; gap:0.5rem; margin-top:0.5rem; }
-  .amenity-check label { display:flex; align-items:center; gap:0.4rem; font-size:0.82rem; cursor:pointer; background:var(--dark3); border:1px solid var(--border); padding:0.3rem 0.7rem; border-radius:8px; transition:all 0.2s; }
-  .amenity-check input { accent-color:var(--primary); }
-  .amenity-check label:hover { border-color:var(--primary); }
-
-  /* ─── EMPTY STATE ─── */
-  .empty-state { grid-column:1/-1; text-align:center; padding:3rem; color:var(--text-muted); }
-  .empty-state .empty-icon { font-size:3rem; margin-bottom:1rem; }
-  .empty-state p { font-size:0.9rem; }
-
-  /* ─── LOADING ─── */
-  .loading-spinner { display:inline-block; width:20px; height:20px; border:2px solid rgba(108,99,255,0.3); border-top-color:var(--primary); border-radius:50%; animation:spin 0.8s linear infinite; }
-  @keyframes spin { to { transform:rotate(360deg); } }
-  .loading-state { grid-column:1/-1; text-align:center; padding:3rem; }
-
-  /* ─── TOAST ─── */
-  .toast { position:fixed; bottom:2rem; right:2rem; z-index:3000; background:var(--card); border:1px solid var(--primary); border-radius:12px; padding:1rem 1.5rem; display:flex; align-items:center; gap:0.75rem; box-shadow:var(--shadow); max-width:340px; transform:translateX(120%); transition:transform 0.4s cubic-bezier(0.34,1.56,0.64,1); }
-  .toast.show { transform:translateX(0); }
-  .toast-icon { font-size:1.5rem; }
-  .toast-msg strong { display:block; font-weight:600; font-size:0.9rem; margin-bottom:0.1rem; }
-  .toast-msg span { font-size:0.82rem; color:var(--text-muted); }
-
-  /* ─── FOOTER ─── */
-  footer { background:var(--dark2); border-top:1px solid var(--border); padding:3rem 2rem 2rem; }
-  .footer-inner { max-width:1200px; margin:0 auto; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1.5rem; }
-  .footer-brand .nav-logo { font-size:1.3rem; }
-  .footer-brand p { font-size:0.82rem; color:var(--text-muted); margin-top:0.4rem; }
-  .footer-links { display:flex; gap:1.5rem; flex-wrap:wrap; }
-  .footer-links a { color:var(--text-muted); text-decoration:none; font-size:0.82rem; transition:color 0.2s; }
-  .footer-links a:hover { color:var(--primary); }
-  .footer-bottom { max-width:1200px; margin:1.5rem auto 0; padding-top:1.5rem; border-top:1px solid var(--border); text-align:center; font-size:0.78rem; color:var(--text-dim); }
-
-  /* ─── MOBILE MENU ─── */
-  .mobile-menu { display:none; flex-direction:column; gap:0.25rem; padding:1rem; background:var(--dark2); border-bottom:1px solid var(--border); }
-  .mobile-menu.open { display:flex; }
-  .mobile-menu a { color:var(--text-muted); text-decoration:none; padding:0.75rem 1rem; border-radius:8px; font-size:0.9rem; }
-  .mobile-menu a:hover { background:rgba(108,99,255,0.08); color:var(--primary); }
-
-  /* ─── REVEAL ─── */
-  .reveal { opacity:0; transform:translateY(30px); transition:opacity 0.6s,transform 0.6s; }
-  .reveal.visible { opacity:1; transform:translateY(0); }
-
-  /* ─── RESPONSIVE ─── */
-  @media(max-width:900px) {
-    .nav-links { display:none; }
-    .hamburger { display:flex; }
-    .payment-content { grid-template-columns:1fr; }
-  }
-  @media(max-width:600px) {
-    nav { padding:0.85rem 1.25rem; }
-    section { padding:3.5rem 1.25rem; }
-    .hero { padding:6rem 1.25rem 3rem; }
-    .listings-grid,.hostel-grid { grid-template-columns:1fr; }
-    .form-row { grid-template-columns:1fr; }
-    h1 { font-size:2rem; }
-    .setup-banner { margin:5rem 1.25rem 0; }
-  }
+@media(max-width:900px){
+  .sidebar{transform:translateX(-100%);}.sidebar.open{transform:translateX(0);}
+  .sidebar-overlay.open{display:block;}.sidebar-toggle{display:flex;}
+  .dash-main{margin-left:0;padding:1.25rem;padding-top:4.5rem;}
+  .form-row{grid-template-columns:1fr;}
+  .stats-row{grid-template-columns:1fr 1fr;}
+}
+@media(max-width:520px){
+  .listings-grid{grid-template-columns:1fr;}
+  .stats-row{grid-template-columns:1fr;}
+  .dash-header h1{font-size:1.4rem;}
+}
 </style>
 </head>
 <body>
 
-<!-- ─── FIREBASE SETUP BANNER ─── -->
-<div class="setup-banner" id="setupBanner" style="display:none">
-  <h3>🔥 One-Time Setup: Connect Your Firebase Database</h3>
-  <div class="setup-steps">
-    <div class="setup-step"><span class="step-badge">1</span><span>Go to <a href="https://console.firebase.google.com" target="_blank">console.firebase.google.com</a> → Click <strong>"Add project"</strong> → Name it <strong>chukaconnect</strong> → Create project</span></div>
-    <div class="setup-step"><span class="step-badge">2</span><span>Inside your project → Click <strong>"Web" (&lt;/&gt;)</strong> icon → Register app → Copy the <code>firebaseConfig</code> object shown</span></div>
-    <div class="setup-step"><span class="step-badge">3</span><span>Open your <strong>index.html</strong> file → Find <code>const firebaseConfig = {</code> near the top → Replace the placeholder values with your copied config</span></div>
-    <div class="setup-step"><span class="step-badge">4</span><span>In Firebase Console → <strong>Authentication</strong> → Get Started → Enable <strong>Email/Password</strong> sign-in method</span></div>
-    <div class="setup-step"><span class="step-badge">5</span><span>In Firebase Console → <strong>Firestore Database</strong> → Create database → Start in <strong>test mode</strong> → Choose a region close to Kenya (e.g. <em>europe-west1</em>)</span></div>
-    <div class="setup-step"><span class="step-badge">6</span><span>In Firebase Console → <strong>Storage</strong> → Get Started → Start in test mode → This allows image uploads</span></div>
-    <div class="setup-step"><span class="step-badge">7</span><span>Save your updated index.html → Upload to GitHub → Your site now has a real database! <button class="btn btn-primary" style="padding:0.3rem 0.8rem;font-size:0.78rem;margin-left:0.5rem" onclick="document.getElementById('setupBanner').style.display='none'">Hide this banner</button></span></div>
+<!-- ══ LANDING / AUTH ══ -->
+<div id="page-landing" class="page active">
+  <div style="position:absolute;inset:0;background:radial-gradient(ellipse 70% 60% at 50% 40%,rgba(108,99,255,0.12),transparent 70%);pointer-events:none"></div>
+  <div class="landing-wrap">
+    <div class="landing-logo">Chuka<span>Connect</span></div>
+    <p class="landing-tag">Hostels · Food · Shops · Boda Boda · Payments</p>
+    <div class="card">
+      <div class="auth-tabs">
+        <button class="auth-tab active" onclick="switchTab('login')">Log In</button>
+        <button class="auth-tab" onclick="switchTab('signup')">Sign Up</button>
+      </div>
+      <!-- LOGIN -->
+      <div id="auth-login" class="auth-panel active">
+        <div class="form-group"><label class="form-label">Email</label><input class="form-input" id="li_email" type="email" placeholder="you@chuka.ac.ke"></div>
+        <div class="form-group"><label class="form-label">Password</label><input class="form-input" id="li_pw" type="password" placeholder="Your password"></div>
+        <div class="form-error" id="li_err"></div>
+        <button class="submit-btn" id="li_btn" onclick="doLogin()">Log In to ChukaConnect</button>
+        <p style="text-align:center;font-size:0.78rem;color:var(--text-muted);margin-top:1rem">No account? <a href="#" onclick="switchTab('signup')" style="color:var(--primary)">Sign up free →</a></p>
+      </div>
+      <!-- SIGN UP -->
+      <div id="auth-signup" class="auth-panel">
+        <div class="form-group">
+          <label class="form-label">I am a</label>
+          <div class="role-grid">
+            <div class="role-card selected" onclick="pickRole(this,'student')"><div class="role-icon">🎓</div><div class="role-name">Student</div></div>
+            <div class="role-card" onclick="pickRole(this,'business')"><div class="role-icon">🏪</div><div class="role-name">Business</div></div>
+            <div class="role-card" onclick="pickRole(this,'rider')"><div class="role-icon">🏍️</div><div class="role-name">Rider</div></div>
+          </div>
+          <input type="hidden" id="su_role" value="student">
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label class="form-label">First Name *</label><input class="form-input" id="su_fn" placeholder="John"></div>
+          <div class="form-group"><label class="form-label">Last Name *</label><input class="form-input" id="su_ln" placeholder="Kamau"></div>
+        </div>
+        <div class="form-group"><label class="form-label">Email *</label><input class="form-input" id="su_email" type="email" placeholder="you@chuka.ac.ke"></div>
+        <div class="form-group"><label class="form-label">M-Pesa Phone</label><input class="form-input" id="su_phone" type="tel" placeholder="0712 345 678"></div>
+        <div class="form-group"><label class="form-label">Password * (min 6 chars)</label><input class="form-input" id="su_pw" type="password" placeholder="Create a password"></div>
+        <div class="form-error" id="su_err"></div>
+        <button class="submit-btn" id="su_btn" onclick="doSignUp()">Create My Account</button>
+        <p style="text-align:center;font-size:0.78rem;color:var(--text-muted);margin-top:1rem">Already registered? <a href="#" onclick="switchTab('login')" style="color:var(--primary)">Log in →</a></p>
+      </div>
+    </div>
   </div>
 </div>
 
-<!-- ─── NAV ─── -->
-<nav id="navbar">
-  <a href="#" class="nav-logo">Chuka<span>Connect</span></a>
-  <ul class="nav-links">
-    <li><a href="#hostels">Hostels</a></li>
-    <li><a href="#services">Services</a></li>
-    <li><a href="#listings">Listings</a></li>
-    <li><a href="#payment">Payment</a></li>
-  </ul>
-  <div class="nav-right">
-    <div id="navLoggedOut" style="display:flex;gap:0.5rem">
-      <button class="btn btn-outline" onclick="openModal('login')">Log In</button>
-      <button class="btn btn-primary" onclick="openModal('signup')">Sign Up</button>
+<!-- ══ DASHBOARD SHELL ══ -->
+<div id="page-dashboard" class="page">
+  <button class="sidebar-toggle" onclick="toggleSidebar()">☰</button>
+  <div class="sidebar-overlay" id="sbOverlay" onclick="toggleSidebar()"></div>
+  <div class="sidebar" id="sidebar">
+    <div class="sidebar-logo">Chuka<span>Connect</span></div>
+    <div id="sidebarNav"></div>
+    <div class="sidebar-bottom">
+      <div class="sidebar-user">
+        <div class="user-avatar" id="sbAvatar">U</div>
+        <div><div class="user-name" id="sbName">—</div><div class="user-role" id="sbRole">—</div></div>
+      </div>
+      <button class="nav-item" onclick="doLogout()" style="color:var(--red)"><span class="nav-icon">🚪</span> Log Out</button>
     </div>
-    <div id="navLoggedIn" class="nav-user" style="display:none">
-      <div class="nav-avatar" id="navAvatarLetter">U</div>
-      <span class="nav-username" id="navUserName"></span>
-      <button class="btn btn-outline" style="padding:0.4rem 0.8rem;font-size:0.82rem" onclick="logOut()">Log Out</button>
-    </div>
-    <button class="hamburger" onclick="toggleMobileMenu()"><span></span><span></span><span></span></button>
   </div>
-</nav>
-
-<div class="mobile-menu" id="mobileMenu">
-  <a href="#hostels">🏠 Hostels</a>
-  <a href="#services">🛍️ Services</a>
-  <a href="#listings">📋 All Listings</a>
-  <a href="#payment">💳 M-Pesa Payment</a>
-  <a href="#" onclick="openModal('login')">🔐 Log In</a>
-  <a href="#" onclick="openModal('signup')" style="color:var(--primary);font-weight:600">✨ Sign Up Free</a>
+  <div class="dash-main" id="dashMain"></div>
 </div>
 
-<!-- ─── HERO ─── -->
-<section class="hero">
-  <div class="hero-bg"></div>
-  <div class="hero-grid"></div>
-  <div class="hero-content">
-    <div class="hero-badge"><span class="dot"></span> Live · Chuka & Tharaka-Nithi Region</div>
-    <h1>Campus Life,<br><span class="highlight">Fully Connected.</span></h1>
-    <p class="hero-desc">Find hostels, order from local businesses, hire a boda boda, and pay with M-Pesa — all in one place built for Chuka University students.</p>
-    <div class="hero-actions">
-      <button class="btn btn-primary btn-lg" onclick="openModal('signup')">🎓 Join as Student</button>
-      <button class="btn btn-outline btn-lg" onclick="openModal('addListing')">📦 List Your Business</button>
-    </div>
-    <div class="hero-stats">
-      <div><div class="stat-num" id="statListings">—</div><div class="stat-label">Active Listings</div></div>
-      <div><div class="stat-num">70km</div><div class="stat-label">Coverage Radius</div></div>
-      <div><div class="stat-num">Free</div><div class="stat-label">To Join</div></div>
-    </div>
-  </div>
-</section>
-
-<!-- ─── SERVICES ─── -->
-<section id="services">
-  <div class="section-inner">
-    <div class="section-tag">What We Connect</div>
-    <h2>Every service around <em>campus</em></h2>
-    <p class="section-desc">From food to healthcare to transport — register your business and reach thousands of students daily.</p>
-    <div class="services-grid reveal">
-      <div class="service-card" onclick="filterAndScroll('food')">
-        <div class="service-icon icon-purple">🍽️</div>
-        <h3>Restaurants & Food</h3>
-        <p>Home-cooked meals, fast food, cafés. Enable boda boda delivery to student hostels.</p>
-      </div>
-      <div class="service-card" onclick="filterAndScroll('mama_mboga')">
-        <div class="service-icon icon-blue">🥦</div>
-        <h3>Mama Mboga & Groceries</h3>
-        <p>Fresh produce and everyday groceries from trusted local vendors near campus.</p>
-      </div>
-      <div class="service-card" onclick="filterAndScroll('chemist')">
-        <div class="service-icon icon-violet">💊</div>
-        <h3>Chemists & Pharmacies</h3>
-        <p>Licensed chemists, medicine, healthcare products. Some open 24 hours.</p>
-      </div>
-      <div class="service-card" onclick="filterAndScroll('shop')">
-        <div class="service-icon icon-purple">🛍️</div>
-        <h3>Shops & Retail</h3>
-        <p>Stationery, electronics, clothing and more from shops in and around campus.</p>
-      </div>
-      <div class="service-card" onclick="filterAndScroll('hostel')">
-        <div class="service-icon icon-blue">🏠</div>
-        <h3>Student Hostels</h3>
-        <p>Verified self-contain rooms, bedsitters and shared accommodation near Chuka University.</p>
-      </div>
-      <div class="service-card" onclick="filterAndScroll('boda')">
-        <div class="service-icon icon-violet">🏍️</div>
-        <h3>Boda Boda Riders</h3>
-        <p>Transport and delivery on demand. Riders earn from both students and businesses.</p>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- ─── LISTINGS ─── -->
-<section id="listings" style="background:var(--dark2)">
-  <div class="section-inner">
-    <div style="display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:1rem;margin-bottom:2rem">
-      <div>
-        <div class="section-tag">Listings</div>
-        <h2>Open <em>now</em>, near you</h2>
-      </div>
-      <button class="btn btn-primary" onclick="openModal('addListing')">+ Add Your Listing</button>
-    </div>
-    <div class="tabs">
-      <button class="tab active" onclick="filterTab(this,'all')">All</button>
-      <button class="tab" onclick="filterTab(this,'food')">🍽️ Food</button>
-      <button class="tab" onclick="filterTab(this,'mama_mboga')">🥦 Groceries</button>
-      <button class="tab" onclick="filterTab(this,'chemist')">💊 Chemist</button>
-      <button class="tab" onclick="filterTab(this,'shop')">🛍️ Shops</button>
-      <button class="tab" onclick="filterTab(this,'hostel')">🏠 Hostels</button>
-      <button class="tab" onclick="filterTab(this,'boda')">🏍️ Boda</button>
-    </div>
-    <div class="listings-grid" id="listingsGrid">
-      <div class="loading-state"><div class="loading-spinner"></div><p style="color:var(--text-muted);margin-top:1rem;font-size:0.85rem">Loading listings…</p></div>
-    </div>
-  </div>
-</section>
-
-<!-- ─── HOSTELS ─── -->
-<section id="hostels">
-  <div class="section-inner">
-    <div style="display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:1rem;margin-bottom:2rem">
-      <div>
-        <div class="section-tag">Accommodation</div>
-        <h2>Find your <em>perfect</em> hostel</h2>
-        <p class="section-desc">Verified hostels within 70km. Compare prices, amenities and book directly with the owner.</p>
-      </div>
-      <button class="btn btn-primary" onclick="openModal('addHostel')">🏠 List Your Hostel</button>
-    </div>
-    <div class="hostel-grid" id="hostelGrid">
-      <div class="loading-state"><div class="loading-spinner"></div><p style="color:var(--text-muted);margin-top:1rem;font-size:0.85rem">Loading hostels…</p></div>
-    </div>
-  </div>
-</section>
-
-<!-- ─── PAYMENT ─── -->
-<section id="payment" class="payment-section">
-  <div class="section-inner payment-content">
-    <div class="reveal">
-      <div class="section-tag">Secure Payments</div>
-      <h2>Pay instantly with <em>M-Pesa</em></h2>
-      <p class="section-desc" style="margin-bottom:1.5rem">All transactions powered by Safaricom M-Pesa. Enter your number and confirm payment directly on your phone.</p>
-      <div class="pay-method"><div class="pay-icon pay-mpesa">M<br>Pesa</div><div class="pay-info"><h4>M-Pesa STK Push</h4><p>Prompt sent to your Safaricom number</p></div><span class="pay-check">✓</span></div>
-      <div class="pay-method"><div class="pay-icon" style="background:rgba(56,189,248,0.15);font-size:1.5rem">🏦</div><div class="pay-info"><h4>Paybill & Till Numbers</h4><p>Pay businesses directly via their paybill</p></div><span class="pay-check">✓</span></div>
-      <div class="pay-method"><div class="pay-icon" style="background:rgba(168,85,247,0.15);font-size:1.5rem">💸</div><div class="pay-info"><h4>Send Money (P2P)</h4><p>Pay riders and individuals directly</p></div><span class="pay-check">✓</span></div>
-    </div>
-    <div class="payment-visual reveal">
-      <div class="pay-card-mock">
-        <div class="pay-card-label">Total Amount</div>
-        <div class="pay-card-amount">KSh 450</div>
-        <div class="pay-card-row"><span>Boda Boda Delivery</span><span>M-Pesa</span></div>
-      </div>
-      <div class="pay-form">
-        <div class="form-group"><label class="form-label">M-Pesa Phone Number</label><input class="pay-input" placeholder="0712 345 678" type="tel" id="mpesaPhone"></div>
-        <div class="form-group"><label class="form-label">Order Summary</label><input class="pay-input" value="Delivery from local business — KSh 450" readonly></div>
-        <button class="pay-submit" onclick="simulateMpesa()">📱 Send M-Pesa Prompt</button>
-        <p style="font-size:0.72rem;color:var(--text-muted);text-align:center;margin-top:0.5rem">You will receive an M-Pesa prompt on your phone to confirm</p>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- ─── FOOTER ─── -->
-<footer>
-  <div class="footer-inner">
-    <div class="footer-brand">
-      <a href="#" class="nav-logo">Chuka<span>Connect</span></a>
-      <p>Connecting students, businesses & riders in Chuka and Tharaka-Nithi. 🇰🇪</p>
-    </div>
-    <div class="footer-links">
-      <a href="#hostels">Hostels</a>
-      <a href="#services">Services</a>
-      <a href="#listings">Listings</a>
-      <a href="#payment">M-Pesa</a>
-      <a href="#" onclick="openModal('addListing')">List Business</a>
-    </div>
-  </div>
-  <div class="footer-bottom">© 2025 ChukaConnect · Built for Chuka University students · Powered by Firebase & M-Pesa</div>
-</footer>
-
-<!-- ─── MODAL ─── -->
-<div class="modal-overlay" id="modalOverlay" onclick="closeModalOnBg(event)">
-  <div class="modal" id="modalContent"></div>
-</div>
-
-<!-- ─── TOAST ─── -->
+<!-- TOAST -->
 <div class="toast" id="toast">
-  <span class="toast-icon" id="toastIcon">✅</span>
-  <div class="toast-msg"><strong id="toastTitle"></strong><span id="toastBody"></span></div>
+  <span id="tIcon" style="font-size:1.4rem">✅</span>
+  <div class="toast-msg"><strong id="tTitle"></strong><span id="tBody"></span></div>
 </div>
 
 <script>
-// ════════════════════════════════════════════════════════
-// CATEGORY EMOJIS & COLORS
-// ════════════════════════════════════════════════════════
-const CAT_META = {
-  food:       { emoji:'🍽️', color:'rgba(108,99,255,0.15)' },
-  mama_mboga: { emoji:'🥦', color:'rgba(56,189,248,0.15)' },
-  chemist:    { emoji:'💊', color:'rgba(168,85,247,0.15)' },
-  shop:       { emoji:'🛍️', color:'rgba(108,99,255,0.12)' },
-  hostel:     { emoji:'🏠', color:'rgba(56,189,248,0.12)' },
-  boda:       { emoji:'🏍️', color:'rgba(168,85,247,0.12)' },
-  salon:      { emoji:'✂️', color:'rgba(108,99,255,0.12)' },
-  other:      { emoji:'📌', color:'rgba(56,189,248,0.12)' },
+// ══ CONFIG ══
+const CC = 'ddqizc83f', CP = 'uz6jp648';
+const ADMIN_EMAIL = 'johnnjenga9097@gmail.com';
+const CAT = {
+  food:{e:'🍽️',c:'rgba(108,99,255,0.15)',l:'Food'},
+  mama_mboga:{e:'🥦',c:'rgba(56,189,248,0.15)',l:'Groceries'},
+  chemist:{e:'💊',c:'rgba(168,85,247,0.15)',l:'Chemist'},
+  shop:{e:'🛍️',c:'rgba(108,99,255,0.12)',l:'Shop'},
+  hostel:{e:'🏠',c:'rgba(56,189,248,0.12)',l:'Hostel'},
+  boda:{e:'🏍️',c:'rgba(168,85,247,0.12)',l:'Boda Boda'},
+  salon:{e:'✂️',c:'rgba(108,99,255,0.12)',l:'Salon'},
+  other:{e:'📌',c:'rgba(56,189,248,0.12)',l:'Other'},
 };
 
-// ════════════════════════════════════════════════════════
-// LOAD LISTINGS FROM FIRESTORE
-// ════════════════════════════════════════════════════════
-let allListings = [];
-let currentFilter = 'all';
+// ══ PAGE UTILS ══
+const showPage = n => { document.querySelectorAll('.page').forEach(p=>p.classList.remove('active')); document.getElementById('page-'+n)?.classList.add('active'); };
+const switchTab = t => { document.querySelectorAll('.auth-tab').forEach(x=>x.classList.remove('active')); document.querySelectorAll('.auth-panel').forEach(x=>x.classList.remove('active')); document.querySelector(`.auth-tab[onclick*="${t}"]`).classList.add('active'); document.getElementById('auth-'+t).classList.add('active'); };
+const pickRole = (el,r) => { document.querySelectorAll('.role-card').forEach(c=>c.classList.remove('selected')); el.classList.add('selected'); document.getElementById('su_role').value=r; };
+const toggleSidebar = () => { document.getElementById('sidebar').classList.toggle('open'); document.getElementById('sbOverlay').classList.toggle('open'); };
+const showPanel = (id,nav) => { document.querySelectorAll('.dash-panel').forEach(p=>p.classList.remove('active')); document.getElementById(id)?.classList.add('active'); if(nav){document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));nav.classList.add('active');} document.getElementById('sidebar').classList.remove('open'); document.getElementById('sbOverlay').classList.remove('open'); };
+const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const showToast = (icon,title,body) => { document.getElementById('tIcon').textContent=icon; document.getElementById('tTitle').textContent=title; document.getElementById('tBody').textContent=body; const t=document.getElementById('toast'); t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),4500); };
+const showErr = (id,msg) => { const e=document.getElementById(id); e.textContent=msg; e.style.display='block'; };
 
-async function loadListings(filter) {
-  currentFilter = filter;
-  const grid = document.getElementById('listingsGrid');
-  if (!window.fbDb) return;
-
-  grid.innerHTML = `<div class="loading-state"><div class="loading-spinner"></div><p style="color:var(--text-muted);margin-top:1rem;font-size:0.85rem">Loading…</p></div>`;
-
-  try {
-    const { collection, getDocs, query, orderBy, where } = window.fbFns;
-    let q;
-    if (filter === 'all' || filter === 'hostel') {
-      q = query(collection(window.fbDb, 'listings'), orderBy('createdAt', 'desc'));
-    } else {
-      q = query(collection(window.fbDb, 'listings'), where('category', '==', filter), orderBy('createdAt', 'desc'));
-    }
-
-    const snap = await getDocs(q);
-    allListings = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-
-    // Filter out hostels from general listings (they have their own section)
-    const filtered = filter === 'all'
-      ? allListings.filter(l => l.category !== 'hostel')
-      : allListings;
-
-    document.getElementById('statListings').textContent = allListings.length + '+';
-    renderListingCards(filtered, grid);
-  } catch (e) {
-    grid.innerHTML = `<div class="empty-state"><div class="empty-icon">⚠️</div><p>Could not load listings. Make sure Firebase is configured.<br><small style="color:var(--text-dim)">${e.message}</small></p></div>`;
-  }
+// ══ ROUTER ══
+function routeToDashboard(role) {
+  const u = window.currentUser;
+  const r = u.email===ADMIN_EMAIL?'admin':role;
+  u.effectiveRole = r;
+  const n = u.name||u.email?.split('@')[0]||'User';
+  document.getElementById('sbName').textContent = n;
+  document.getElementById('sbAvatar').textContent = n[0].toUpperCase();
+  const rMap = {student:'🎓 Student',business:'🏪 Business Owner',rider:'🏍️ Boda Rider',admin:'⚙️ Admin'};
+  document.getElementById('sbRole').textContent = rMap[r]||r;
+  if(r==='student') buildStudent();
+  else if(r==='business') buildBusiness();
+  else if(r==='rider') buildRider();
+  else if(r==='admin') buildAdmin();
+  showPage('dashboard');
 }
 
-async function loadHostels() {
-  const grid = document.getElementById('hostelGrid');
-  if (!window.fbDb) return;
-
-  try {
-    const { collection, getDocs, query, where, orderBy } = window.fbFns;
-    const q = query(collection(window.fbDb, 'listings'), where('category', '==', 'hostel'), orderBy('createdAt', 'desc'));
-    const snap = await getDocs(q);
-    const hostels = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    renderHostelCards(hostels, grid);
-  } catch(e) {
-    grid.innerHTML = `<div class="empty-state"><div class="empty-icon">🏠</div><p>No hostels listed yet.<br><button class="btn btn-primary" style="margin-top:0.75rem" onclick="openModal('addHostel')">Be the first to list one!</button></p></div>`;
-  }
-}
-
-function renderListingCards(data, grid) {
-  if (!data.length) {
-    grid.innerHTML = `<div class="empty-state"><div class="empty-icon">📭</div><p>No listings yet in this category.<br><button class="btn btn-primary" style="margin-top:0.75rem" onclick="openModal('addListing')">Add the first one!</button></p></div>`;
-    return;
-  }
-  grid.innerHTML = data.map(l => {
-    const meta = CAT_META[l.category] || CAT_META.other;
-    const imgHtml = l.imageUrl
-      ? `<img src="${l.imageUrl}" alt="${l.name}" style="width:100%;height:100%;object-fit:cover;">`
-      : `<span class="emoji-fallback">${meta.emoji}</span>`;
-    return `
-      <div class="listing-card">
-        <div class="card-img" style="background:${meta.color}">
-          ${imgHtml}
-          <div class="status-pill badge-open">Open</div>
-        </div>
-        <div class="card-body">
-          <h4>${escHtml(l.name)}</h4>
-          <p class="card-sub">${escHtml(l.description || '')}</p>
-          <div class="card-meta">
-            <span class="rating">★ 5.0 <span style="color:var(--text-muted)">(new)</span></span>
-            <span class="distance">📍 ${escHtml(l.location || 'Nearby')}</span>
-          </div>
-          ${l.phone ? `<button class="btn btn-outline" style="width:100%;margin-top:0.75rem;padding:0.5rem;font-size:0.82rem" onclick="event.stopPropagation();window.location='tel:${l.phone}'">📞 Call ${escHtml(l.phone)}</button>` : ''}
-          ${l.delivery ? `<div style="font-size:0.72rem;color:var(--accent);margin-top:0.4rem;text-align:center">🛵 Delivery Available</div>` : ''}
-        </div>
-      </div>`;
-  }).join('');
-}
-
-function renderHostelCards(data, grid) {
-  if (!data.length) {
-    grid.innerHTML = `<div class="empty-state"><div class="empty-icon">🏠</div><p>No hostels listed yet.<br><button class="btn btn-primary" style="margin-top:0.75rem" onclick="openModal('addHostel')">List Your Hostel!</button></p></div>`;
-    return;
-  }
-  grid.innerHTML = data.map(h => {
-    const imgHtml = h.imageUrl
-      ? `<img src="${h.imageUrl}" alt="${h.name}" style="width:100%;height:100%;object-fit:cover;">`
-      : `<span style="font-size:3.5rem">🏠</span>`;
-    const features = (h.amenities || []).map(a => `<span class="hostel-tag">${a}</span>`).join('');
-    return `
-      <div class="hostel-card">
-        <div class="card-img" style="background:rgba(108,99,255,0.12)">
-          ${imgHtml}
-          <div class="status-pill badge-open">${escHtml(h.roomType || 'Room')}</div>
-        </div>
-        <div class="card-body">
-          <h4>${escHtml(h.name)}</h4>
-          <p class="card-sub">📍 ${escHtml(h.location || '')}</p>
-          <div class="hostel-features">${features}</div>
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-top:0.5rem">
-            <div class="hostel-price">KSh ${escHtml(String(h.price || '—'))} <span>/month</span></div>
-          </div>
-          ${h.phone ? `<button class="btn btn-primary" style="width:100%;margin-top:0.75rem;padding:0.5rem;font-size:0.82rem" onclick="event.stopPropagation();window.location='tel:${h.phone}'">📞 Book: ${escHtml(h.phone)}</button>` : ''}
-        </div>
-      </div>`;
-  }).join('');
-}
-
-// ════════════════════════════════════════════════════════
-// MODALS
-// ════════════════════════════════════════════════════════
-function openModal(type, param) {
-  const overlay = document.getElementById('modalOverlay');
-  const content = document.getElementById('modalContent');
-  const fn = modalTemplates[type];
-  if (!fn) return;
-  content.innerHTML = fn(param);
-  overlay.classList.add('open');
-  document.body.style.overflow = 'hidden';
-}
-function closeModal() {
-  document.getElementById('modalOverlay').classList.remove('open');
-  document.body.style.overflow = '';
-}
-function closeModalOnBg(e) {
-  if (e.target === document.getElementById('modalOverlay')) closeModal();
-}
-
-const modalTemplates = {
-
-  // ─── SIGN UP ───
-  signup: () => `
-    <div class="modal-header">
-      <h3>🎓 Create Account</h3>
-      <button class="modal-close" onclick="closeModal()">✕</button>
-    </div>
-    <div class="form-row">
-      <div class="form-group"><label class="form-label">First Name</label><input class="form-input" id="su_fname" placeholder="John"></div>
-      <div class="form-group"><label class="form-label">Last Name</label><input class="form-input" id="su_lname" placeholder="Kamau"></div>
-    </div>
-    <div class="form-group"><label class="form-label">Email Address</label><input class="form-input" id="su_email" placeholder="john@chuka.ac.ke" type="email"></div>
-    <div class="form-group"><label class="form-label">M-Pesa Phone Number</label><input class="form-input" id="su_phone" placeholder="0712 345 678" type="tel"></div>
-    <div class="form-group"><label class="form-label">I am a</label>
-      <select class="form-select" id="su_role">
-        <option value="student">Student</option>
-        <option value="business">Business Owner</option>
-        <option value="rider">Boda Boda Rider</option>
-      </select>
-    </div>
-    <div class="form-group"><label class="form-label">Password</label><input class="form-input" id="su_password" placeholder="At least 6 characters" type="password"></div>
-    <button class="pay-submit" id="su_btn" onclick="doSignUp()">Create Account</button>
-    <p style="font-size:0.75rem;color:var(--text-muted);text-align:center;margin-top:0.75rem">Already have an account? <a href="#" onclick="openModal('login')" style="color:var(--primary)">Log in</a></p>
-  `,
-
-  // ─── LOGIN ───
-  login: () => `
-    <div class="modal-header">
-      <h3>👋 Welcome Back</h3>
-      <button class="modal-close" onclick="closeModal()">✕</button>
-    </div>
-    <div class="form-group"><label class="form-label">Email Address</label><input class="form-input" id="li_email" placeholder="john@chuka.ac.ke" type="email"></div>
-    <div class="form-group"><label class="form-label">Password</label><input class="form-input" id="li_password" placeholder="Your password" type="password"></div>
-    <button class="pay-submit" id="li_btn" onclick="doLogin()">Log In</button>
-    <p style="font-size:0.75rem;color:var(--text-muted);text-align:center;margin-top:0.75rem">No account? <a href="#" onclick="openModal('signup')" style="color:var(--primary)">Sign up free</a></p>
-  `,
-
-  // ─── ADD LISTING ───
-  addListing: () => `
-    <div class="modal-header">
-      <h3>📦 Add Your Business Listing</h3>
-      <button class="modal-close" onclick="closeModal()">✕</button>
-    </div>
-    <div class="form-group"><label class="form-label">Business Name *</label><input class="form-input" id="al_name" placeholder="e.g. Mama Achieng's Kitchen"></div>
-    <div class="form-group"><label class="form-label">Category *</label>
-      <select class="form-select" id="al_category">
-        <option value="food">🍽️ Restaurant / Food</option>
-        <option value="mama_mboga">🥦 Mama Mboga / Groceries</option>
-        <option value="chemist">💊 Chemist / Pharmacy</option>
-        <option value="shop">🛍️ Shop / Retail</option>
-        <option value="salon">✂️ Salon / Barbershop</option>
-        <option value="boda">🏍️ Boda Boda Rider</option>
-        <option value="other">📌 Other Service</option>
-      </select>
-    </div>
-    <div class="form-group"><label class="form-label">Description</label><textarea class="form-textarea" id="al_desc" placeholder="What do you offer? Opening hours, specialties…"></textarea></div>
-    <div class="form-group"><label class="form-label">Location / Address *</label><input class="form-input" id="al_location" placeholder="e.g. 200m from Chuka University gate, along Tharaka road"></div>
-    <div class="form-row">
-      <div class="form-group"><label class="form-label">Phone Number *</label><input class="form-input" id="al_phone" placeholder="0712 345 678" type="tel"></div>
-      <div class="form-group"><label class="form-label">M-Pesa Till/Paybill</label><input class="form-input" id="al_till" placeholder="e.g. 174379"></div>
-    </div>
-    <div class="form-group">
-      <label class="form-label">Business Photo</label>
-      <div class="image-upload-area" id="al_uploadArea">
-        <input type="file" id="al_imageFile" accept="image/*" onchange="previewImage('al_imageFile','al_imgPreview','al_uploadArea')">
-        <div class="upload-icon">📷</div>
-        <p>Click or drag to upload a photo</p>
-        <p class="upload-hint">JPG, PNG, WebP — max 5MB</p>
-        <img id="al_imgPreview" class="image-preview" alt="preview">
-      </div>
-      <div class="upload-progress" id="al_progress">
-        <div class="progress-bar-wrap"><div class="progress-bar-fill" id="al_progressBar"></div></div>
-        <div class="progress-label" id="al_progressLabel">Uploading…</div>
-      </div>
-    </div>
-    <div class="form-group">
-      <label style="display:flex;align-items:center;gap:0.6rem;cursor:pointer;font-size:0.85rem">
-        <input type="checkbox" id="al_delivery" style="accent-color:var(--primary);width:16px;height:16px">
-        We offer delivery (boda boda can pick up orders from us)
-      </label>
-    </div>
-    <button class="pay-submit" id="al_btn" onclick="doAddListing()">🚀 Submit Listing</button>
-    <p style="font-size:0.72rem;color:var(--text-muted);text-align:center;margin-top:0.5rem">Your listing will appear live immediately after submission</p>
-  `,
-
-  // ─── ADD HOSTEL ───
-  addHostel: () => `
-    <div class="modal-header">
-      <h3>🏠 List Your Hostel</h3>
-      <button class="modal-close" onclick="closeModal()">✕</button>
-    </div>
-    <div class="form-group"><label class="form-label">Hostel Name *</label><input class="form-input" id="ah_name" placeholder="e.g. Greenview Student Hostels"></div>
-    <div class="form-group"><label class="form-label">Location / Address *</label><input class="form-input" id="ah_location" placeholder="e.g. 1.2km from Chuka University, off Tharaka Road"></div>
-    <div class="form-row">
-      <div class="form-group"><label class="form-label">Room Type *</label>
-        <select class="form-select" id="ah_roomType">
-          <option>Single Room</option>
-          <option>Bedsitter</option>
-          <option>Self-Contain</option>
-          <option>Shared Room</option>
-          <option>Studio</option>
-        </select>
-      </div>
-      <div class="form-group"><label class="form-label">Price per Month (KSh) *</label><input class="form-input" id="ah_price" placeholder="e.g. 3500" type="number"></div>
-    </div>
-    <div class="form-group"><label class="form-label">Owner Phone Number *</label><input class="form-input" id="ah_phone" placeholder="0712 345 678" type="tel"></div>
-    <div class="form-group">
-      <label class="form-label">Amenities</label>
-      <div class="amenities-grid">
-        ${['WiFi','Water','Security','CCTV','Kitchen','Parking','Cleaning Service','Study Room','Generator'].map(a=>`
-          <div class="amenity-check">
-            <label><input type="checkbox" value="${a}" class="ah_amenity"> ${a}</label>
-          </div>`).join('')}
-      </div>
-    </div>
-    <div class="form-group">
-      <label class="form-label">Hostel Photos</label>
-      <div class="image-upload-area" id="ah_uploadArea">
-        <input type="file" id="ah_imageFile" accept="image/*" onchange="previewImage('ah_imageFile','ah_imgPreview','ah_uploadArea')">
-        <div class="upload-icon">📸</div>
-        <p>Upload a photo of your hostel</p>
-        <p class="upload-hint">JPG, PNG, WebP — max 5MB</p>
-        <img id="ah_imgPreview" class="image-preview" alt="preview">
-      </div>
-      <div class="upload-progress" id="ah_progress">
-        <div class="progress-bar-wrap"><div class="progress-bar-fill" id="ah_progressBar"></div></div>
-        <div class="progress-label" id="ah_progressLabel">Uploading…</div>
-      </div>
-    </div>
-    <div class="form-group"><label class="form-label">Additional Notes</label><textarea class="form-textarea" id="ah_notes" placeholder="Any other details students should know…"></textarea></div>
-    <button class="pay-submit" id="ah_btn" onclick="doAddHostel()">🏠 Submit Hostel</button>
-  `,
-
-};
-
-// ════════════════════════════════════════════════════════
-// FIREBASE AUTH ACTIONS
-// ════════════════════════════════════════════════════════
-async function doSignUp() {
-  const email = document.getElementById('su_email')?.value.trim();
-  const password = document.getElementById('su_password')?.value;
-  const fname = document.getElementById('su_fname')?.value.trim();
-  const lname = document.getElementById('su_lname')?.value.trim();
-  if (!email || !password || !fname) { showToast('⚠️','Missing Fields','Please fill in all required fields.'); return; }
-  const btn = document.getElementById('su_btn');
-  btn.textContent = 'Creating account…'; btn.disabled = true;
-  try {
-    const { createUserWithEmailAndPassword } = window.fbFns;
-    const cred = await createUserWithEmailAndPassword(window.fbAuth, email, password);
-    // Save extra user info to Firestore
-    const { collection, addDoc, serverTimestamp } = window.fbFns;
-    await addDoc(collection(window.fbDb, 'users'), {
-      uid: cred.user.uid,
-      name: fname + ' ' + lname,
-      email,
-      phone: document.getElementById('su_phone')?.value || '',
-      role: document.getElementById('su_role')?.value || 'student',
-      createdAt: serverTimestamp()
-    });
-    document.getElementById('navAvatarLetter').textContent = fname[0].toUpperCase();
-    closeModal();
-    showToast('🎉','Welcome to ChukaConnect!',`Hello ${fname}! Your account is ready.`);
-  } catch(e) {
-    btn.textContent = 'Create Account'; btn.disabled = false;
-    showToast('❌','Sign Up Failed', e.message.replace('Firebase:','').trim());
-  }
-}
-
+// ══ AUTH ══
 async function doLogin() {
-  const email = document.getElementById('li_email')?.value.trim();
-  const password = document.getElementById('li_password')?.value;
-  if (!email || !password) { showToast('⚠️','Missing Fields','Enter your email and password.'); return; }
-  const btn = document.getElementById('li_btn');
-  btn.textContent = 'Logging in…'; btn.disabled = true;
-  try {
-    const { signInWithEmailAndPassword } = window.fbFns;
-    await signInWithEmailAndPassword(window.fbAuth, email, password);
-    closeModal();
-    showToast('👋','Welcome back!','You are now logged in.');
-  } catch(e) {
-    btn.textContent = 'Log In'; btn.disabled = false;
-    showToast('❌','Login Failed','Incorrect email or password. Try again.');
-  }
+  const email=document.getElementById('li_email').value.trim(), pw=document.getElementById('li_pw').value;
+  document.getElementById('li_err').style.display='none';
+  if(!email||!pw){showErr('li_err','Enter your email and password.');return;}
+  const btn=document.getElementById('li_btn'); btn.textContent='Logging in…'; btn.disabled=true;
+  try { await window.fbFns.signInWithEmailAndPassword(window.fbAuth,email,pw); }
+  catch(e){ btn.textContent='Log In to ChukaConnect'; btn.disabled=false; showErr('li_err','Wrong email or password. Try again.'); }
 }
 
-async function logOut() {
-  const { signOut } = window.fbFns;
-  await signOut(window.fbAuth);
-  showToast('👋','Logged Out','See you next time!');
+async function doSignUp() {
+  const fn=document.getElementById('su_fn').value.trim(), ln=document.getElementById('su_ln').value.trim();
+  const email=document.getElementById('su_email').value.trim(), pw=document.getElementById('su_pw').value;
+  const phone=document.getElementById('su_phone').value.trim(), role=document.getElementById('su_role').value;
+  document.getElementById('su_err').style.display='none';
+  if(!fn||!email||!pw){showErr('su_err','First name, email and password are required.');return;}
+  if(pw.length<6){showErr('su_err','Password must be at least 6 characters.');return;}
+  const btn=document.getElementById('su_btn'); btn.textContent='Creating…'; btn.disabled=true;
+  try {
+    const cred = await window.fbFns.createUserWithEmailAndPassword(window.fbAuth,email,pw);
+    const data = {uid:cred.user.uid,name:fn+' '+ln,email,phone,role,createdAt:window.fbFns.serverTimestamp()};
+    await window.fbFns.addDoc(window.fbFns.collection(window.fbDb,'users'),data);
+    window.currentUser = data;
+    showToast('🎉','Welcome!',`Hello ${fn}, your account is ready!`);
+  } catch(e){ btn.textContent='Create My Account'; btn.disabled=false; showErr('su_err',e.code==='auth/email-already-in-use'?'Email already registered. Please log in.':e.message); }
 }
 
-// ════════════════════════════════════════════════════════
-// ADD LISTING WITH IMAGE UPLOAD
-// ════════════════════════════════════════════════════════
-async function doAddListing() {
-  const name = document.getElementById('al_name')?.value.trim();
-  const category = document.getElementById('al_category')?.value;
-  const location = document.getElementById('al_location')?.value.trim();
-  const phone = document.getElementById('al_phone')?.value.trim();
-  if (!name || !location || !phone) { showToast('⚠️','Missing Fields','Name, location and phone are required.'); return; }
+async function doLogout(){ await window.fbFns.signOut(window.fbAuth); window.currentUser=null; showPage('landing'); showToast('👋','Logged Out','See you next time!'); }
 
-  const btn = document.getElementById('al_btn');
-  btn.textContent = '⏳ Saving…'; btn.disabled = true;
+// ══════════════════════════════════════════
+// 🎓 STUDENT DASHBOARD
+// ══════════════════════════════════════════
+function buildStudent() {
+  const u = window.currentUser;
+  document.getElementById('sidebarNav').innerHTML = `
+    <button class="nav-item active" onclick="showPanel('s-home',this)"><span class="nav-icon">🏠</span>Home</button>
+    <div class="sidebar-section">Discover</div>
+    <button class="nav-item" onclick="showPanel('s-browse',this);sLoad('all','s-grid')"><span class="nav-icon">🗂️</span>All Services</button>
+    <button class="nav-item" onclick="showPanel('s-hostels',this);sLoad('hostel','s-hgrid')"><span class="nav-icon">🏠</span>Hostels</button>
+    <button class="nav-item" onclick="showPanel('s-food',this);sLoad('food','s-fgrid')"><span class="nav-icon">🍽️</span>Food & Restaurants</button>
+    <button class="nav-item" onclick="showPanel('s-chemist',this);sLoad('chemist','s-cgrid')"><span class="nav-icon">💊</span>Chemists</button>
+    <button class="nav-item" onclick="showPanel('s-boda',this);sLoad('boda','s-bgrid')"><span class="nav-icon">🏍️</span>Boda Boda</button>
+    <button class="nav-item" onclick="showPanel('s-shops',this);sLoad('shop','s-sgrid')"><span class="nav-icon">🛍️</span>Shops</button>
+    <div class="sidebar-section">Account</div>
+    <button class="nav-item" onclick="showPanel('s-profile',this)"><span class="nav-icon">👤</span>My Profile</button>`;
+  const nm = u.name?.split(' ')[0]||'Student';
+  document.getElementById('dashMain').innerHTML = `
+    <div id="s-home" class="dash-panel active">
+      <div class="dash-header"><h1>👋 Welcome, ${esc(nm)}!</h1><p>Discover everything around Chuka University campus</p></div>
+      <div class="stats-row">
+        <div class="stat-card"><div class="stat-num" id="ss1">—</div><div class="stat-label">Active Listings</div></div>
+        <div class="stat-card green"><div class="stat-num" id="ss2">—</div><div class="stat-label">Hostels Available</div></div>
+        <div class="stat-card blue"><div class="stat-num" id="ss3">—</div><div class="stat-label">Boda Riders</div></div>
+        <div class="stat-card orange"><div class="stat-num" id="ss4">—</div><div class="stat-label">Food Places</div></div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:0.85rem;margin-bottom:2rem">
+        ${[['🏠','Hostels','s-hostels',"sLoad('hostel','s-hgrid')"],['🍽️','Food','s-food',"sLoad('food','s-fgrid')"],['💊','Chemist','s-chemist',"sLoad('chemist','s-cgrid')"],['🏍️','Boda','s-boda',"sLoad('boda','s-bgrid')"],['🛍️','Shops','s-shops',"sLoad('shop','s-sgrid')"],['🥦','Groceries','s-browse',"sLoad('mama_mboga','s-grid')"]]
+          .map(([ic,lb,pn,fn])=>`<div class="card" style="text-align:center;cursor:pointer;padding:1.1rem 0.5rem" onclick="showPanel('${pn}',null);${fn}"><div style="font-size:2rem;margin-bottom:0.4rem">${ic}</div><div style="font-size:0.78rem;font-weight:600">${lb}</div></div>`).join('')}
+      </div>
+      <h3 style="font-family:'Syne',sans-serif;margin-bottom:1rem">Latest Near You</h3>
+      <div class="listings-grid" id="s-recent"><div class="loading-block"><div class="spinner"></div></div></div>
+    </div>
+    <div id="s-browse" class="dash-panel"><div class="dash-header"><h1>🗂️ All Services</h1></div><div class="listings-grid" id="s-grid"><div class="loading-block"><div class="spinner"></div></div></div></div>
+    <div id="s-hostels" class="dash-panel"><div class="dash-header"><h1>🏠 Student Hostels</h1><p>Verified accommodation near campus</p></div><div class="listings-grid" id="s-hgrid"><div class="loading-block"><div class="spinner"></div></div></div></div>
+    <div id="s-food" class="dash-panel"><div class="dash-header"><h1>🍽️ Food & Restaurants</h1></div><div class="listings-grid" id="s-fgrid"><div class="loading-block"><div class="spinner"></div></div></div></div>
+    <div id="s-chemist" class="dash-panel"><div class="dash-header"><h1>💊 Chemists & Pharmacies</h1></div><div class="listings-grid" id="s-cgrid"><div class="loading-block"><div class="spinner"></div></div></div></div>
+    <div id="s-boda" class="dash-panel"><div class="dash-header"><h1>🏍️ Boda Boda Riders</h1><p>Request a ride or delivery</p></div><div class="listings-grid" id="s-bgrid"><div class="loading-block"><div class="spinner"></div></div></div></div>
+    <div id="s-shops" class="dash-panel"><div class="dash-header"><h1>🛍️ Shops & Retail</h1></div><div class="listings-grid" id="s-sgrid"><div class="loading-block"><div class="spinner"></div></div></div></div>
+    <div id="s-profile" class="dash-panel">
+      <div class="dash-header"><h1>👤 My Profile</h1></div>
+      <div class="card" style="max-width:440px">
+        <div style="display:flex;align-items:center;gap:1rem;margin-bottom:1.5rem">
+          <div class="user-avatar" style="width:52px;height:52px;font-size:1.2rem">${esc((u.name||'S')[0].toUpperCase())}</div>
+          <div><div style="font-family:'Syne',sans-serif;font-size:1.05rem;font-weight:700">${esc(u.name||'')}</div><div style="font-size:0.8rem;color:var(--text-muted)">🎓 Student · ${esc(u.email||'')}</div></div>
+        </div>
+        <div class="form-group"><label class="form-label">Phone</label><div class="form-input" style="cursor:default">${esc(u.phone||'Not set')}</div></div>
+        <button class="btn btn-red btn-sm" onclick="doLogout()" style="margin-top:0.5rem">🚪 Log Out</button>
+      </div>
+    </div>`;
+  loadStudentStats();
+  sLoad('all','s-recent');
+}
 
-  try {
-    let imageUrl = '';
-    const fileInput = document.getElementById('al_imageFile');
-    if (fileInput?.files[0]) {
-      imageUrl = await uploadImage(fileInput.files[0], 'listings', 'al_progressBar', 'al_progressLabel', 'al_progress');
-    }
+async function loadStudentStats(){
+  try{
+    const {collection,getDocs,query,where}=window.fbFns, db=window.fbDb;
+    const [a,h,b,f]=await Promise.all([
+      getDocs(query(collection(db,'listings'),where('status','==','approved'))),
+      getDocs(query(collection(db,'listings'),where('status','==','approved'),where('category','==','hostel'))),
+      getDocs(query(collection(db,'listings'),where('status','==','approved'),where('category','==','boda'))),
+      getDocs(query(collection(db,'listings'),where('status','==','approved'),where('category','==','food'))),
+    ]);
+    document.getElementById('ss1').textContent=a.size;
+    document.getElementById('ss2').textContent=h.size;
+    document.getElementById('ss3').textContent=b.size;
+    document.getElementById('ss4').textContent=f.size;
+  }catch(e){}
+}
 
-    const { collection, addDoc, serverTimestamp } = window.fbFns;
-    await addDoc(collection(window.fbDb, 'listings'), {
-      name, category,
-      description: document.getElementById('al_desc')?.value.trim() || '',
-      location, phone,
-      till: document.getElementById('al_till')?.value.trim() || '',
-      delivery: document.getElementById('al_delivery')?.checked || false,
-      imageUrl,
-      createdAt: serverTimestamp(),
-      ownerUid: window.fbAuth.currentUser?.uid || 'anonymous'
+async function sLoad(cat,gridId){
+  const grid=document.getElementById(gridId); if(!grid)return;
+  grid.innerHTML=`<div class="loading-block"><div class="spinner"></div></div>`;
+  try{
+    const {collection,getDocs,query,where,orderBy}=window.fbFns, db=window.fbDb;
+    let q;
+    if(cat==='all') q=query(collection(db,'listings'),where('status','==','approved'),where('category','!=','hostel'),orderBy('category'),orderBy('createdAt','desc'));
+    else q=query(collection(db,'listings'),where('status','==','approved'),where('category','==',cat),orderBy('createdAt','desc'));
+    const snap=await getDocs(q);
+    const items=snap.docs.map(d=>({id:d.id,...d.data()}));
+    if(!items.length){grid.innerHTML=`<div class="empty"><div class="ei">${CAT[cat]?.e||'📭'}</div><p>No listings here yet.</p></div>`;return;}
+    grid.innerHTML=items.map(l=>studentCard(l)).join('');
+  }catch(e){grid.innerHTML=`<div class="empty"><p>Error: ${esc(e.message)}</p></div>`;}
+}
+
+function studentCard(l){
+  const m=CAT[l.category]||CAT.other;
+  const img=l.imageUrl?`<img src="${esc(l.imageUrl)}" alt="${esc(l.name)}" style="width:100%;height:100%;object-fit:cover">`:`<span class="emoji-big">${m.e}</span>`;
+  const tags=(l.amenities||[]).slice(0,3).map(a=>`<span style="background:var(--dark3);border:1px solid var(--border);padding:0.1rem 0.45rem;border-radius:5px;font-size:0.63rem;color:var(--text-muted)">${esc(a)}</span>`).join('');
+  return `<div class="listing-card">
+    <div class="lcard-img" style="background:${m.c}">${img}<span class="pill pill-open">${m.l}</span></div>
+    <div class="lcard-body">
+      <h4>${esc(l.name)}</h4>
+      <p class="lcard-sub">📍 ${esc(l.location||'Nearby')}</p>
+      ${l.description?`<p class="lcard-sub">${esc(l.description).substring(0,75)}${l.description.length>75?'…':''}</p>`:''}
+      ${tags?`<div style="display:flex;gap:0.3rem;flex-wrap:wrap;margin-bottom:0.5rem">${tags}</div>`:''}
+      ${l.price?`<div style="font-family:'Syne',sans-serif;font-weight:700;color:var(--primary);font-size:0.9rem">KSh ${esc(String(l.price))}<span style="font-size:0.68rem;font-weight:400;color:var(--text-muted)">/mo</span></div>`:''}
+      ${l.delivery?`<div style="font-size:0.7rem;color:var(--accent);margin-top:0.25rem">🛵 Delivery Available</div>`:''}
+      ${l.phone?`<button class="btn btn-primary btn-sm" style="width:100%;margin-top:0.75rem;justify-content:center" onclick="window.location='tel:${esc(l.phone)}'">📞 ${esc(l.phone)}</button>`:''}
+    </div>
+  </div>`;
+}
+
+// ══════════════════════════════════════════
+// 🏪 BUSINESS DASHBOARD
+// ══════════════════════════════════════════
+function buildBusiness(){
+  const u=window.currentUser;
+  document.getElementById('sidebarNav').innerHTML=`
+    <button class="nav-item active" onclick="showPanel('b-home',this)"><span class="nav-icon">📊</span>Dashboard</button>
+    <div class="sidebar-section">My Business</div>
+    <button class="nav-item" onclick="showPanel('b-listings',this);loadMyListings()"><span class="nav-icon">📋</span>My Listings</button>
+    <button class="nav-item" onclick="showPanel('b-add',this)"><span class="nav-icon">➕</span>Add New Listing</button>
+    <div class="sidebar-section">Account</div>
+    <button class="nav-item" onclick="showPanel('b-profile',this)"><span class="nav-icon">👤</span>Profile</button>`;
+  document.getElementById('dashMain').innerHTML=`
+    <div id="b-home" class="dash-panel active">
+      <div class="dash-header"><h1>📊 Business Dashboard</h1><p>Welcome, ${esc(u.name?.split(' ')[0]||'')}! Manage your listings here.</p></div>
+      <div class="stats-row">
+        <div class="stat-card"><div class="stat-num" id="bs1">—</div><div class="stat-label">Total Listings</div></div>
+        <div class="stat-card green"><div class="stat-num" id="bs2">—</div><div class="stat-label">Live & Approved</div></div>
+        <div class="stat-card orange"><div class="stat-num" id="bs3">—</div><div class="stat-label">Pending Review</div></div>
+      </div>
+      <div style="display:flex;gap:1rem;flex-wrap:wrap;margin-bottom:2rem">
+        <button class="btn btn-primary" onclick="showPanel('b-add',null)">➕ Add New Listing</button>
+        <button class="btn btn-outline" onclick="showPanel('b-listings',null);loadMyListings()">📋 View My Listings</button>
+      </div>
+      <div class="card" style="border-left:4px solid var(--orange)">
+        <div style="font-family:'Syne',sans-serif;font-weight:700;margin-bottom:0.5rem">📋 How It Works</div>
+        <p style="font-size:0.85rem;color:var(--text-muted);line-height:1.8">
+          1️⃣ Add your listing with photo and details<br>
+          2️⃣ Admin reviews and approves it (usually within a few hours)<br>
+          3️⃣ Once approved, students can see and contact you<br>
+          4️⃣ You can manage all your listings from here
+        </p>
+      </div>
+    </div>
+    <div id="b-listings" class="dash-panel">
+      <div class="dash-header"><h1>📋 My Listings</h1><p>All your submitted listings and their approval status</p></div>
+      <div class="listings-grid" id="b-lgrid"><div class="loading-block"><div class="spinner"></div></div></div>
+    </div>
+    <div id="b-add" class="dash-panel">
+      <div class="dash-header"><h1>➕ Add New Listing</h1><p>Fill in your business details. Admin will review before it goes live.</p></div>
+      <div style="max-width:580px">
+        <div class="card">
+          <div class="form-group"><label class="form-label">Business / Service Name *</label><input class="form-input" id="al_name" placeholder="e.g. Mama Achieng's Kitchen"></div>
+          <div class="form-group"><label class="form-label">Category *</label>
+            <select class="form-select" id="al_cat" onchange="toggleHostelFields()">
+              <option value="food">🍽️ Restaurant / Food</option>
+              <option value="mama_mboga">🥦 Mama Mboga / Groceries</option>
+              <option value="chemist">💊 Chemist / Pharmacy</option>
+              <option value="shop">🛍️ Shop / Retail</option>
+              <option value="salon">✂️ Salon / Barbershop</option>
+              <option value="hostel">🏠 Hostel / Accommodation</option>
+              <option value="boda">🏍️ Boda Boda</option>
+              <option value="other">📌 Other</option>
+            </select>
+          </div>
+          <div class="form-group"><label class="form-label">Description</label><textarea class="form-textarea" id="al_desc" placeholder="What do you offer? Opening hours, specialties…"></textarea></div>
+          <div class="form-group"><label class="form-label">Location / Address *</label><input class="form-input" id="al_loc" placeholder="e.g. 200m from Chuka University gate"></div>
+          <div class="form-row">
+            <div class="form-group"><label class="form-label">Phone Number *</label><input class="form-input" id="al_phone" type="tel" placeholder="0712 345 678"></div>
+            <div class="form-group"><label class="form-label">Price / Rate (KSh)</label><input class="form-input" id="al_price" type="number" placeholder="e.g. 3500"></div>
+          </div>
+          <div class="form-group"><label class="form-label">M-Pesa Till / Paybill (optional)</label><input class="form-input" id="al_till" placeholder="e.g. 174379"></div>
+          <div id="hostelFields" style="display:none">
+            <div class="form-group"><label class="form-label">Room Type</label>
+              <select class="form-select" id="al_room"><option>Single Room</option><option>Bedsitter</option><option>Self-Contain</option><option>Shared Room</option></select>
+            </div>
+            <div class="form-group"><label class="form-label">Amenities</label>
+              <div class="amenities-wrap">
+                ${['WiFi','Water','Security','CCTV','Kitchen','Parking','Cleaning','Study Room','Generator'].map(a=>`<label class="amenity-label"><input type="checkbox" class="alamen" value="${a}"> ${a}</label>`).join('')}
+              </div>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Business Photo</label>
+            <div class="upload-area">
+              <input type="file" id="al_img" accept="image/*" onchange="prevImg('al_img','al_prev')">
+              <div style="font-size:2rem;margin-bottom:0.4rem">📷</div>
+              <p>Click or drag to upload a photo</p>
+              <p style="font-size:0.72rem;color:var(--text-dim)">JPG, PNG — max 5MB</p>
+              <img id="al_prev" class="img-preview" alt="preview">
+            </div>
+            <div class="progress-wrap" id="al_pw"><div class="progress-track"><div class="progress-fill" id="al_pb"></div></div><div class="progress-label" id="al_pl">Uploading…</div></div>
+          </div>
+          <div class="form-group">
+            <label style="display:flex;align-items:center;gap:0.6rem;cursor:pointer;font-size:0.85rem">
+              <input type="checkbox" id="al_del" style="accent-color:var(--primary);width:16px;height:16px">
+              We offer delivery (boda riders can pick up from us)
+            </label>
+          </div>
+          <button class="submit-btn" id="al_btn" onclick="doAddListing()">🚀 Submit for Approval</button>
+          <p style="font-size:0.72rem;color:var(--text-muted);text-align:center;margin-top:0.5rem">Listing will be reviewed by admin before appearing to students</p>
+        </div>
+      </div>
+    </div>
+    <div id="b-profile" class="dash-panel">
+      <div class="dash-header"><h1>👤 Profile</h1></div>
+      <div class="card" style="max-width:440px">
+        <div style="display:flex;align-items:center;gap:1rem;margin-bottom:1.5rem">
+          <div class="user-avatar" style="width:52px;height:52px;font-size:1.2rem">${esc((u.name||'B')[0].toUpperCase())}</div>
+          <div><div style="font-family:'Syne',sans-serif;font-size:1.05rem;font-weight:700">${esc(u.name||'')}</div><div style="font-size:0.8rem;color:var(--text-muted)">🏪 Business Owner · ${esc(u.email||'')}</div></div>
+        </div>
+        <div class="form-group"><label class="form-label">Phone</label><div class="form-input" style="cursor:default">${esc(u.phone||'Not set')}</div></div>
+        <button class="btn btn-red btn-sm" onclick="doLogout()">🚪 Log Out</button>
+      </div>
+    </div>`;
+  loadBizStats();
+}
+
+function toggleHostelFields(){ document.getElementById('hostelFields').style.display = document.getElementById('al_cat').value==='hostel'?'block':'none'; }
+
+async function loadBizStats(){
+  try{
+    const {collection,getDocs,query,where}=window.fbFns, db=window.fbDb, uid=window.currentUser.uid;
+    const all=await getDocs(query(collection(db,'listings'),where('ownerUid','==',uid)));
+    const app=all.docs.filter(d=>d.data().status==='approved').length;
+    const pnd=all.docs.filter(d=>d.data().status==='pending').length;
+    document.getElementById('bs1').textContent=all.size;
+    document.getElementById('bs2').textContent=app;
+    document.getElementById('bs3').textContent=pnd;
+  }catch(e){}
+}
+
+async function loadMyListings(){
+  const grid=document.getElementById('b-lgrid');
+  grid.innerHTML=`<div class="loading-block"><div class="spinner"></div></div>`;
+  try{
+    const {collection,getDocs,query,where,orderBy}=window.fbFns, db=window.fbDb;
+    const q=query(collection(db,'listings'),where('ownerUid','==',window.currentUser.uid),orderBy('createdAt','desc'));
+    const snap=await getDocs(q);
+    const items=snap.docs.map(d=>({id:d.id,...d.data()}));
+    if(!items.length){grid.innerHTML=`<div class="empty"><div class="ei">📭</div><p>No listings yet.</p><button class="btn btn-primary" onclick="showPanel('b-add',null)">➕ Add Your First Listing</button></div>`;return;}
+    grid.innerHTML=items.map(l=>{
+      const m=CAT[l.category]||CAT.other;
+      const img=l.imageUrl?`<img src="${esc(l.imageUrl)}" style="width:100%;height:100%;object-fit:cover">`:`<span class="emoji-big">${m.e}</span>`;
+      const sc=l.status==='approved'?'pill-approved':l.status==='rejected'?'pill-rejected':'pill-pending';
+      const sl=l.status==='approved'?'✅ Live':l.status==='rejected'?'❌ Rejected':'⏳ Pending';
+      return `<div class="listing-card">
+        <div class="lcard-img" style="background:${m.c}">${img}<span class="pill ${sc}">${sl}</span></div>
+        <div class="lcard-body">
+          <h4>${esc(l.name)}</h4>
+          <p class="lcard-sub">${m.l} · 📍 ${esc(l.location||'')}</p>
+          ${l.status==='pending'?`<p style="font-size:0.78rem;color:var(--orange);margin:0.4rem 0">⏳ Waiting for admin review</p>`:''}
+          ${l.status==='approved'?`<p style="font-size:0.78rem;color:var(--green);margin:0.4rem 0">✅ Visible to all students</p>`:''}
+          ${l.status==='rejected'?`<p style="font-size:0.78rem;color:var(--red);margin:0.4rem 0">❌ Not approved. Contact admin.</p>`:''}
+          <div class="lcard-actions"><button class="btn btn-red btn-sm" onclick="delListing('${l.id}')">🗑️ Delete</button></div>
+        </div>
+      </div>`;
+    }).join('');
+  }catch(e){grid.innerHTML=`<div class="empty"><p>Error: ${esc(e.message)}</p></div>`;}
+}
+
+async function doAddListing(){
+  const name=document.getElementById('al_name').value.trim(), cat=document.getElementById('al_cat').value;
+  const loc=document.getElementById('al_loc').value.trim(), phone=document.getElementById('al_phone').value.trim();
+  if(!name||!loc||!phone){showToast('⚠️','Missing Fields','Name, location and phone are required.');return;}
+  const btn=document.getElementById('al_btn'); btn.textContent='⏳ Submitting…'; btn.disabled=true;
+  try{
+    let imageUrl='';
+    const f=document.getElementById('al_img').files[0];
+    if(f) imageUrl=await cloudUpload(f,'al_pb','al_pl','al_pw');
+    const amenities=[...document.querySelectorAll('.alamen:checked')].map(c=>c.value);
+    const {collection,addDoc,serverTimestamp}=window.fbFns;
+    await addDoc(window.fbFns.collection(window.fbDb,'listings'),{
+      name,category:cat,description:document.getElementById('al_desc').value.trim(),
+      location:loc,phone,price:document.getElementById('al_price').value||'',
+      till:document.getElementById('al_till').value.trim(),
+      roomType:document.getElementById('al_room')?.value||'',amenities,
+      delivery:document.getElementById('al_del').checked,imageUrl,
+      status:'pending',ownerUid:window.currentUser.uid,ownerName:window.currentUser.name,
+      createdAt:serverTimestamp()
     });
-
-    closeModal();
-    showToast('🎉','Listing Added!','Your business is now live on ChukaConnect!');
-    loadListings(currentFilter);
-  } catch(e) {
-    btn.textContent = '🚀 Submit Listing'; btn.disabled = false;
-    showToast('❌','Error',e.message);
-  }
+    ['al_name','al_desc','al_loc','al_phone','al_price','al_till'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+    document.getElementById('al_prev').style.display='none';
+    btn.textContent='🚀 Submit for Approval'; btn.disabled=false;
+    showToast('🎉','Submitted!','Admin will review your listing shortly.');
+    loadBizStats();
+  }catch(e){btn.textContent='🚀 Submit for Approval';btn.disabled=false;showToast('❌','Error',e.message);}
 }
 
-async function doAddHostel() {
-  const name = document.getElementById('ah_name')?.value.trim();
-  const location = document.getElementById('ah_location')?.value.trim();
-  const phone = document.getElementById('ah_phone')?.value.trim();
-  const price = document.getElementById('ah_price')?.value.trim();
-  if (!name || !location || !phone || !price) { showToast('⚠️','Missing Fields','Name, location, phone and price are required.'); return; }
+async function delListing(id){
+  if(!confirm('Delete this listing permanently?'))return;
+  try{await window.fbFns.deleteDoc(window.fbFns.doc(window.fbDb,'listings',id));showToast('🗑️','Deleted','Listing removed.');loadMyListings();loadBizStats();}
+  catch(e){showToast('❌','Error',e.message);}
+}
 
-  const btn = document.getElementById('ah_btn');
-  btn.textContent = '⏳ Saving…'; btn.disabled = true;
+// ══════════════════════════════════════════
+// 🏍️ RIDER DASHBOARD
+// ══════════════════════════════════════════
+function buildRider(){
+  const u=window.currentUser;
+  document.getElementById('sidebarNav').innerHTML=`
+    <button class="nav-item active" onclick="showPanel('r-home',this)"><span class="nav-icon">🏠</span>Dashboard</button>
+    <div class="sidebar-section">My Work</div>
+    <button class="nav-item" onclick="showPanel('r-profile',this)"><span class="nav-icon">🏍️</span>My Rider Profile</button>
+    <button class="nav-item" onclick="showPanel('r-biz',this);loadRiderBiz()"><span class="nav-icon">🏪</span>Delivery Businesses</button>
+    <div class="sidebar-section">Account</div>
+    <button class="nav-item" onclick="showPanel('r-acct',this)"><span class="nav-icon">👤</span>Account</button>`;
+  document.getElementById('dashMain').innerHTML=`
+    <div id="r-home" class="dash-panel active">
+      <div class="dash-header"><h1>🏍️ Rider Dashboard</h1><p>Welcome, ${esc(u.name?.split(' ')[0]||'')}!</p></div>
+      <div class="card" style="border-left:4px solid var(--primary);margin-bottom:1.5rem">
+        <div style="font-family:'Syne',sans-serif;font-weight:700;margin-bottom:0.5rem">How ChukaConnect Riders Work</div>
+        <p style="font-size:0.85rem;color:var(--text-muted);line-height:1.8">
+          🟣 Complete your rider profile so students and businesses can find you<br>
+          🟣 Students contact you directly for personal rides<br>
+          🟣 Businesses with delivery enabled contact you for package pickups<br>
+          🟣 You receive M-Pesa payment from each customer directly
+        </p>
+      </div>
+      <button class="btn btn-primary" onclick="showPanel('r-profile',null)">✏️ Set Up My Rider Profile</button>
+    </div>
+    <div id="r-profile" class="dash-panel">
+      <div class="dash-header"><h1>🏍️ My Rider Profile</h1><p>Visible to students and businesses once approved</p></div>
+      <div style="max-width:580px"><div class="card">
+        <div class="form-group"><label class="form-label">Full Name</label><input class="form-input" id="rp_name" value="${esc(u.name||'')}"></div>
+        <div class="form-row">
+          <div class="form-group"><label class="form-label">Phone *</label><input class="form-input" id="rp_phone" type="tel" value="${esc(u.phone||'')}" placeholder="0712 345 678"></div>
+          <div class="form-group"><label class="form-label">M-Pesa Number</label><input class="form-input" id="rp_mpesa" type="tel" placeholder="0712 345 678"></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label class="form-label">Bike Reg *</label><input class="form-input" id="rp_reg" placeholder="e.g. KMZB 001A"></div>
+          <div class="form-group"><label class="form-label">Bike Model</label><input class="form-input" id="rp_bike" placeholder="e.g. Honda CG 125"></div>
+        </div>
+        <div class="form-group"><label class="form-label">Operating Area *</label><input class="form-input" id="rp_area" placeholder="e.g. Chuka Campus to Tharaka Road"></div>
+        <div class="form-group"><label class="form-label">National ID</label><input class="form-input" id="rp_nid" placeholder="For verification"></div>
+        <div class="form-group"><label class="form-label">Profile / Bike Photo</label>
+          <div class="upload-area">
+            <input type="file" id="rp_img" accept="image/*" onchange="prevImg('rp_img','rp_prev')">
+            <div style="font-size:2rem;margin-bottom:0.4rem">📸</div><p>Upload your photo or bike photo</p>
+            <img id="rp_prev" class="img-preview" alt="preview">
+          </div>
+          <div class="progress-wrap" id="rp_pw"><div class="progress-track"><div class="progress-fill" id="rp_pb"></div></div><div class="progress-label" id="rp_pl"></div></div>
+        </div>
+        <button class="submit-btn" id="rp_btn" onclick="saveRiderProfile()">💾 Save & Submit Profile</button>
+        <p style="font-size:0.72rem;color:var(--text-muted);text-align:center;margin-top:0.5rem">Profile will be reviewed by admin before going live</p>
+      </div></div>
+    </div>
+    <div id="r-biz" class="dash-panel">
+      <div class="dash-header"><h1>🏪 Delivery Businesses</h1><p>These businesses accept boda deliveries — contact them for jobs</p></div>
+      <div class="listings-grid" id="r-bgrid"><div class="loading-block"><div class="spinner"></div></div></div>
+    </div>
+    <div id="r-acct" class="dash-panel">
+      <div class="dash-header"><h1>👤 Account</h1></div>
+      <div class="card" style="max-width:440px">
+        <div style="font-family:'Syne',sans-serif;font-size:1.05rem;font-weight:700;margin-bottom:0.25rem">${esc(u.name||'')}</div>
+        <div style="font-size:0.82rem;color:var(--text-muted);margin-bottom:1rem">${esc(u.email||'')}</div>
+        <button class="btn btn-red btn-sm" onclick="doLogout()">🚪 Log Out</button>
+      </div>
+    </div>`;
+}
 
-  const amenities = [...document.querySelectorAll('.ah_amenity:checked')].map(cb => cb.value);
-
-  try {
-    let imageUrl = '';
-    const fileInput = document.getElementById('ah_imageFile');
-    if (fileInput?.files[0]) {
-      imageUrl = await uploadImage(fileInput.files[0], 'hostels', 'ah_progressBar', 'ah_progressLabel', 'ah_progress');
-    }
-
-    const { collection, addDoc, serverTimestamp } = window.fbFns;
-    await addDoc(collection(window.fbDb, 'listings'), {
-      name, category: 'hostel', location, phone, price,
-      roomType: document.getElementById('ah_roomType')?.value || 'Room',
-      amenities,
-      notes: document.getElementById('ah_notes')?.value.trim() || '',
-      imageUrl,
-      createdAt: serverTimestamp(),
-      ownerUid: window.fbAuth.currentUser?.uid || 'anonymous'
+async function saveRiderProfile(){
+  const phone=document.getElementById('rp_phone').value.trim(), reg=document.getElementById('rp_reg').value.trim(), area=document.getElementById('rp_area').value.trim();
+  if(!phone||!reg||!area){showToast('⚠️','Missing Fields','Phone, bike reg and area are required.');return;}
+  const btn=document.getElementById('rp_btn'); btn.textContent='Saving…'; btn.disabled=true;
+  try{
+    let imageUrl='';
+    const f=document.getElementById('rp_img').files[0];
+    if(f) imageUrl=await cloudUpload(f,'rp_pb','rp_pl','rp_pw');
+    const nm=document.getElementById('rp_name').value.trim(), bike=document.getElementById('rp_bike').value.trim();
+    const {collection,addDoc,serverTimestamp}=window.fbFns;
+    await addDoc(window.fbFns.collection(window.fbDb,'listings'),{
+      name:nm, category:'boda', phone, mpesa:document.getElementById('rp_mpesa').value.trim(),
+      bikeReg:reg, bikeModel:bike, location:area, nationalId:document.getElementById('rp_nid').value.trim(),
+      description:`🏍️ ${bike||'Boda Rider'} · ${area}`, imageUrl,
+      status:'pending', ownerUid:window.currentUser.uid, ownerName:window.currentUser.name,
+      createdAt:serverTimestamp()
     });
-
-    closeModal();
-    showToast('🏠','Hostel Listed!','Your hostel is now visible to all students!');
-    loadHostels();
-  } catch(e) {
-    btn.textContent = '🏠 Submit Hostel'; btn.disabled = false;
-    showToast('❌','Error',e.message);
-  }
+    btn.textContent='💾 Save & Submit Profile'; btn.disabled=false;
+    showToast('✅','Profile Submitted!','Admin will review and approve your rider profile.');
+  }catch(e){btn.textContent='💾 Save & Submit Profile';btn.disabled=false;showToast('❌','Error',e.message);}
 }
 
-// ════════════════════════════════════════════════════════
-// IMAGE UPLOAD TO FIREBASE STORAGE
-// ════════════════════════════════════════════════════════
-function uploadImage(file, folder, progressBarId, progressLabelId, progressWrapId) {
-  return new Promise((resolve, reject) => {
-    if (file.size > 5 * 1024 * 1024) { reject(new Error('Image too large. Max 5MB.')); return; }
-    const { ref, uploadBytesResumable, getDownloadURL } = window.fbFns;
-    const storageRef = ref(window.fbStorage, `${folder}/${Date.now()}_${file.name}`);
-    const task = uploadBytesResumable(storageRef, file);
-
-    document.getElementById(progressWrapId).style.display = 'block';
-
-    task.on('state_changed',
-      (snap) => {
-        const pct = Math.round((snap.bytesTransferred / snap.totalBytes) * 100);
-        document.getElementById(progressBarId).style.width = pct + '%';
-        document.getElementById(progressLabelId).textContent = `Uploading… ${pct}%`;
-      },
-      (err) => reject(err),
-      async () => {
-        const url = await getDownloadURL(task.snapshot.ref);
-        document.getElementById(progressLabelId).textContent = '✅ Upload complete!';
-        resolve(url);
-      }
-    );
-  });
+async function loadRiderBiz(){
+  const grid=document.getElementById('r-bgrid');
+  grid.innerHTML=`<div class="loading-block"><div class="spinner"></div></div>`;
+  try{
+    const {collection,getDocs,query,where,orderBy}=window.fbFns, db=window.fbDb;
+    const q=query(collection(db,'listings'),where('status','==','approved'),where('delivery','==',true),orderBy('createdAt','desc'));
+    const snap=await getDocs(q);
+    const items=snap.docs.map(d=>({id:d.id,...d.data()}));
+    if(!items.length){grid.innerHTML=`<div class="empty"><div class="ei">🏪</div><p>No delivery businesses yet.</p></div>`;return;}
+    grid.innerHTML=items.map(l=>studentCard(l)).join('');
+  }catch(e){grid.innerHTML=`<div class="empty"><p>${esc(e.message)}</p></div>`;}
 }
 
-function previewImage(inputId, previewId, areaId) {
-  const file = document.getElementById(inputId)?.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = (e) => {
-    const preview = document.getElementById(previewId);
-    if (preview) { preview.src = e.target.result; preview.style.display = 'block'; }
-  };
-  reader.readAsDataURL(file);
+// ══════════════════════════════════════════
+// ⚙️ ADMIN DASHBOARD
+// ══════════════════════════════════════════
+function buildAdmin(){
+  document.getElementById('sidebarNav').innerHTML=`
+    <button class="nav-item active" onclick="showPanel('a-home',this)"><span class="nav-icon">📊</span>Overview</button>
+    <div class="sidebar-section">Moderation</div>
+    <button class="nav-item" onclick="showPanel('a-pending',this);loadPending()" id="a-pnav">
+      <span class="nav-icon">⏳</span>Pending Approval<span class="nav-badge" id="pBadge" style="display:none">0</span>
+    </button>
+    <button class="nav-item" onclick="showPanel('a-all',this);loadAllL()"><span class="nav-icon">📋</span>All Listings</button>
+    <div class="sidebar-section">Users</div>
+    <button class="nav-item" onclick="showPanel('a-users',this);loadUsers()"><span class="nav-icon">👥</span>All Users</button>`;
+  document.getElementById('dashMain').innerHTML=`
+    <div id="a-home" class="dash-panel active">
+      <div class="dash-header"><h1>⚙️ Admin Panel</h1><p>Manage all listings, users and approvals for ChukaConnect</p></div>
+      <div class="stats-row">
+        <div class="stat-card"><div class="stat-num" id="as1">—</div><div class="stat-label">Total Listings</div></div>
+        <div class="stat-card green"><div class="stat-num" id="as2">—</div><div class="stat-label">Approved & Live</div></div>
+        <div class="stat-card orange"><div class="stat-num" id="as3">—</div><div class="stat-label">Pending Review</div></div>
+        <div class="stat-card blue"><div class="stat-num" id="as4">—</div><div class="stat-label">Registered Users</div></div>
+      </div>
+      <div style="display:flex;gap:1rem;flex-wrap:wrap">
+        <button class="btn btn-orange" onclick="showPanel('a-pending',null);loadPending()">⏳ Review Pending</button>
+        <button class="btn btn-outline" onclick="showPanel('a-all',null);loadAllL()">📋 All Listings</button>
+        <button class="btn btn-outline" onclick="showPanel('a-users',null);loadUsers()">👥 All Users</button>
+      </div>
+    </div>
+    <div id="a-pending" class="dash-panel">
+      <div class="dash-header"><h1>⏳ Pending Approval</h1><p>Review and approve or reject submitted listings</p></div>
+      <div id="a-pgrid"><div class="loading-block"><div class="spinner"></div></div></div>
+    </div>
+    <div id="a-all" class="dash-panel">
+      <div class="dash-header"><h1>📋 All Listings</h1></div>
+      <div id="a-agrid"><div class="loading-block"><div class="spinner"></div></div></div>
+    </div>
+    <div id="a-users" class="dash-panel">
+      <div class="dash-header"><h1>👥 Registered Users</h1></div>
+      <div class="card" style="overflow-x:auto">
+        <table class="data-table">
+          <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Phone</th><th>Joined</th></tr></thead>
+          <tbody id="a-utbody"><tr><td colspan="5" style="text-align:center;padding:2rem"><div class="spinner"></div></td></tr></tbody>
+        </table>
+      </div>
+    </div>`;
+  loadAdminStats();
+  loadPending();
 }
 
-// ════════════════════════════════════════════════════════
-// FILTERS & NAV
-// ════════════════════════════════════════════════════════
-function filterTab(el, cat) {
-  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-  el.classList.add('active');
-  loadListings(cat);
+async function loadAdminStats(){
+  try{
+    const {collection,getDocs,query,where}=window.fbFns, db=window.fbDb;
+    const [al,ap,pn,us]=await Promise.all([
+      getDocs(collection(db,'listings')),
+      getDocs(query(collection(db,'listings'),where('status','==','approved'))),
+      getDocs(query(collection(db,'listings'),where('status','==','pending'))),
+      getDocs(collection(db,'users')),
+    ]);
+    document.getElementById('as1').textContent=al.size;
+    document.getElementById('as2').textContent=ap.size;
+    document.getElementById('as3').textContent=pn.size;
+    document.getElementById('as4').textContent=us.size;
+    const badge=document.getElementById('pBadge');
+    if(pn.size>0){badge.textContent=pn.size;badge.style.display='inline-block';}
+    else badge.style.display='none';
+  }catch(e){}
 }
 
-function filterAndScroll(cat) {
-  document.getElementById('listings').scrollIntoView({ behavior:'smooth' });
-  setTimeout(() => {
-    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-    const matchTab = [...document.querySelectorAll('.tab')].find(t => t.getAttribute('onclick')?.includes(`'${cat}'`));
-    if (matchTab) matchTab.classList.add('active');
-    loadListings(cat);
-  }, 500);
+async function loadPending(){
+  const grid=document.getElementById('a-pgrid');
+  grid.innerHTML=`<div class="loading-block"><div class="spinner"></div></div>`;
+  try{
+    const {collection,getDocs,query,where,orderBy}=window.fbFns, db=window.fbDb;
+    const snap=await getDocs(query(collection(db,'listings'),where('status','==','pending'),orderBy('createdAt','asc')));
+    const items=snap.docs.map(d=>({id:d.id,...d.data()}));
+    if(!items.length){grid.innerHTML=`<div class="empty" style="grid-column:unset"><div class="ei">✅</div><p>All caught up! No pending listings.</p></div>`;return;}
+    grid.innerHTML=`<div class="listings-grid">${items.map(l=>adminCard(l)).join('')}</div>`;
+  }catch(e){grid.innerHTML=`<div class="empty"><p>${esc(e.message)}</p></div>`;}
 }
 
-function toggleMobileMenu() {
-  document.getElementById('mobileMenu').classList.toggle('open');
+async function loadAllL(){
+  const grid=document.getElementById('a-agrid');
+  grid.innerHTML=`<div class="loading-block"><div class="spinner"></div></div>`;
+  try{
+    const {collection,getDocs,query,orderBy}=window.fbFns, db=window.fbDb;
+    const snap=await getDocs(query(collection(db,'listings'),orderBy('createdAt','desc')));
+    const items=snap.docs.map(d=>({id:d.id,...d.data()}));
+    if(!items.length){grid.innerHTML=`<div class="empty" style="grid-column:unset"><div class="ei">📭</div><p>No listings yet.</p></div>`;return;}
+    grid.innerHTML=`<div class="listings-grid">${items.map(l=>adminCard(l)).join('')}</div>`;
+  }catch(e){grid.innerHTML=`<div class="empty"><p>${esc(e.message)}</p></div>`;}
 }
 
-// ════════════════════════════════════════════════════════
-// TOAST
-// ════════════════════════════════════════════════════════
-function showToast(icon, title, body) {
-  const toast = document.getElementById('toast');
-  document.getElementById('toastIcon').textContent = icon;
-  document.getElementById('toastTitle').textContent = title;
-  document.getElementById('toastBody').textContent = body;
-  toast.classList.add('show');
-  setTimeout(() => toast.classList.remove('show'), 4500);
+function adminCard(l){
+  const m=CAT[l.category]||CAT.other;
+  const img=l.imageUrl?`<img src="${esc(l.imageUrl)}" style="width:100%;height:100%;object-fit:cover">`:`<span class="emoji-big">${m.e}</span>`;
+  const sc=l.status==='approved'?'pill-approved':l.status==='rejected'?'pill-rejected':'pill-pending';
+  const sl=l.status==='approved'?'✅ Approved':l.status==='rejected'?'❌ Rejected':'⏳ Pending';
+  return `<div class="listing-card">
+    <div class="lcard-img" style="background:${m.c}">${img}<span class="pill ${sc}">${sl}</span></div>
+    <div class="lcard-body">
+      <h4>${esc(l.name)}</h4>
+      <p class="lcard-sub">${m.l} · 📍 ${esc(l.location||'')}</p>
+      <p class="lcard-sub">👤 ${esc(l.ownerName||'Unknown')} · 📞 ${esc(l.phone||'—')}</p>
+      ${l.description?`<p class="lcard-sub">${esc(l.description).substring(0,60)}</p>`:''}
+      <div class="lcard-actions">
+        ${l.status!=='approved'?`<button class="btn btn-green btn-sm" onclick="setStatus('${l.id}','approved')">✅ Approve</button>`:''}
+        ${l.status!=='rejected'?`<button class="btn btn-red btn-sm" onclick="setStatus('${l.id}','rejected')">❌ Reject</button>`:''}
+        <button class="btn btn-outline btn-sm" onclick="adminDel('${l.id}')">🗑️</button>
+      </div>
+    </div>
+  </div>`;
 }
 
-// ════════════════════════════════════════════════════════
-// M-PESA SIMULATION
-// ════════════════════════════════════════════════════════
-function simulateMpesa() {
-  const phone = document.getElementById('mpesaPhone')?.value;
-  if (!phone || phone.length < 9) { showToast('⚠️','Enter Phone Number','Please enter a valid Safaricom number first.'); return; }
-  showToast('📱','M-Pesa Prompt Sent!',`Check your phone (${phone}) for the M-Pesa PIN prompt.`);
+async function setStatus(id,status){
+  try{
+    await window.fbFns.updateDoc(window.fbFns.doc(window.fbDb,'listings',id),{status});
+    showToast(status==='approved'?'✅':'❌',status==='approved'?'Listing Approved!':'Listing Rejected',status==='approved'?'Now visible to all students.':'Listing has been hidden.');
+    loadPending(); loadAllL(); loadAdminStats();
+  }catch(e){showToast('❌','Error',e.message);}
 }
 
-// ════════════════════════════════════════════════════════
-// HELPERS
-// ════════════════════════════════════════════════════════
-function escHtml(str) {
-  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+async function adminDel(id){
+  if(!confirm('Permanently delete?'))return;
+  try{await window.fbFns.deleteDoc(window.fbFns.doc(window.fbDb,'listings',id));showToast('🗑️','Deleted','Listing removed.');loadAllL();loadAdminStats();}
+  catch(e){showToast('❌','Error',e.message);}
 }
 
-// Scroll reveal
-const observer = new IntersectionObserver(entries => {
-  entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
-}, { threshold: 0.1 });
-document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+async function loadUsers(){
+  const tbody=document.getElementById('a-utbody');
+  try{
+    const {collection,getDocs,query,orderBy}=window.fbFns, db=window.fbDb;
+    const snap=await getDocs(query(collection(db,'users'),orderBy('createdAt','desc')));
+    const users=snap.docs.map(d=>({id:d.id,...d.data()}));
+    if(!users.length){tbody.innerHTML=`<tr><td colspan="5" style="text-align:center;padding:2rem;color:var(--text-muted)">No users yet.</td></tr>`;return;}
+    const ri={student:'🎓',business:'🏪',rider:'🏍️',admin:'⚙️'};
+    tbody.innerHTML=users.map(u=>`
+      <tr>
+        <td><strong>${esc(u.name||'—')}</strong></td>
+        <td style="color:var(--text-muted);font-size:0.82rem">${esc(u.email||'—')}</td>
+        <td><span class="status-badge" style="background:rgba(108,99,255,0.15);color:var(--primary)">${ri[u.role]||''} ${u.role||'—'}</span></td>
+        <td style="color:var(--text-muted);font-size:0.82rem">${esc(u.phone||'—')}</td>
+        <td style="color:var(--text-dim);font-size:0.78rem">${u.createdAt?.toDate?u.createdAt.toDate().toLocaleDateString('en-KE'):'-'}</td>
+      </tr>`).join('');
+  }catch(e){tbody.innerHTML=`<tr><td colspan="5" style="color:var(--red);padding:1rem">${esc(e.message)}</td></tr>`;}
+}
 
-// Navbar scroll
-window.addEventListener('scroll', () => {
-  document.getElementById('navbar').style.background =
-    window.scrollY > 50 ? 'rgba(9,9,15,0.99)' : 'rgba(9,9,15,0.9)';
-});
+// ══ CLOUDINARY ══
+async function cloudUpload(file,barId,labelId,wrapId){
+  if(file.size>5*1024*1024)throw new Error('Image too large. Max 5MB.');
+  document.getElementById(wrapId).style.display='block';
+  document.getElementById(barId).style.width='10%';
+  document.getElementById(labelId).textContent='Uploading photo…';
+  const fd=new FormData(); fd.append('file',file); fd.append('upload_preset',CP); fd.append('folder','chukaconnect');
+  let pct=10;
+  const t=setInterval(()=>{pct=Math.min(pct+8,85);document.getElementById(barId).style.width=pct+'%';},300);
+  const res=await fetch(`https://api.cloudinary.com/v1_1/${CC}/image/upload`,{method:'POST',body:fd});
+  clearInterval(t);
+  if(!res.ok)throw new Error('Photo upload failed. Check Cloudinary preset is Unsigned.');
+  const data=await res.json();
+  document.getElementById(barId).style.width='100%';
+  document.getElementById(labelId).textContent='✅ Uploaded!';
+  return data.secure_url;
+}
+
+function prevImg(inputId,previewId){
+  const f=document.getElementById(inputId)?.files[0]; if(!f)return;
+  const r=new FileReader(); r.onload=e=>{const el=document.getElementById(previewId);if(el){el.src=e.target.result;el.style.display='block';}};
+  r.readAsDataURL(f);
+}
 </script>
 </body>
 </html>
