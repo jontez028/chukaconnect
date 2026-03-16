@@ -181,9 +181,10 @@ select.field-input { appearance:none; cursor:pointer; background-image:url("data
    AUTH PAGE
 ════════════════════════════════════════ */
 #page-auth {
-  min-height:100vh; display:flex;
+  min-height:100vh;
   background:var(--white);
 }
+#page-auth.active { display:flex; }
 .auth-left {
   flex:1; display:flex; flex-direction:column; justify-content:center;
   padding:48px; max-width:480px;
@@ -224,7 +225,8 @@ select.field-input { appearance:none; cursor:pointer; background-image:url("data
 /* ════════════════════════════════════════
    DASHBOARD SHELL
 ════════════════════════════════════════ */
-#page-dashboard { display:flex; min-height:100vh; }
+#page-dashboard { min-height:100vh; }
+#page-dashboard.active { display:flex; }
 .sidebar {
   width:240px; background:var(--white); border-right:1px solid var(--gray-200);
   display:flex; flex-direction:column;
@@ -328,20 +330,34 @@ select.field-input { appearance:none; cursor:pointer; background-image:url("data
 
 /* ── RESPONSIVE ──────────────────────── */
 @media(max-width:900px) {
+  /* Auth page - mobile: full screen, no split */
+  #page-auth.active { display:block; }
   .auth-right { display:none; }
-  .auth-left { max-width:100%; padding:32px 24px; }
+  .auth-left {
+    max-width:100%; width:100%;
+    min-height:100vh;
+    padding:40px 24px 32px;
+    justify-content:flex-start;
+  }
+  /* Dashboard - mobile sidebar hidden */
   .sidebar { transform:translateX(-100%); }
-  .sidebar.open { transform:translateX(0); }
+  .sidebar.open { transform:translateX(0); box-shadow:var(--shadow-lg); }
   .sb-overlay.open { display:block; }
   .sb-toggle { display:flex; }
-  .main { margin-left:0; padding:16px; padding-top:60px; }
+  .main { margin-left:0; padding:16px; padding-top:58px; }
   .field-row { grid-template-columns:1fr; }
   .stats-grid { grid-template-columns:1fr 1fr; }
+  .panel-header h1 { font-size:1.2rem; }
+  .listings-grid { grid-template-columns:1fr 1fr; gap:12px; }
 }
 @media(max-width:520px) {
   .listings-grid { grid-template-columns:1fr; }
-  .stats-grid { grid-template-columns:1fr; }
-  .auth-left { padding:24px 20px; }
+  .stats-grid { grid-template-columns:1fr 1fr; }
+  .auth-left { padding:32px 20px 28px; }
+  .auth-brand { font-size:1.3rem; margin-bottom:24px; }
+  .lcard-img { height:130px; }
+  .main { padding:12px; padding-top:55px; }
+  .sb-logo { padding:16px 14px; }
 }
 </style>
 </head>
@@ -470,9 +486,15 @@ const esc = s  => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/
 const ge  = (tag,cls,html) => { const el=document.createElement(tag); if(cls)el.className=cls; if(html)el.innerHTML=html; return el; };
 
 function showPage(name) {
-  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.page').forEach(p => {
+    p.classList.remove('active');
+    p.style.display = '';
+  });
   const pg = $('page-' + name);
-  if (pg) pg.classList.add('active');
+  if (pg) {
+    pg.classList.add('active');
+    window.scrollTo(0, 0);
+  }
 }
 
 function showPanel(id, navEl) {
@@ -715,7 +737,7 @@ async function loadStudentStats() {
     const db = window._db;
     const [a,h,f,b] = await Promise.all([
       getDocs(query(collection(db,'listings'), where('status','==','approved'))),
-      getDocs(query(collection(db,'listings'), where('status','==','approved'), where('category','==','hostel'))),
+      getDocs(query(collection(db,'listings'), where('status','==','approved'), where('category','==','hostel'), orderBy('createdAt','desc'))),
       getDocs(query(collection(db,'listings'), where('status','==','approved'), where('category','==','food'))),
       getDocs(query(collection(db,'listings'), where('status','==','approved'), where('category','==','boda'))),
     ]);
@@ -734,9 +756,10 @@ async function sLoad(cat, gridId) {
     const db = window._db;
     let q;
     if (cat === 'all') {
-      q = query(collection(db,'listings'), where('status','==','approved'), where('category','!=','hostel'), orderBy('category'), orderBy('createdAt','desc'));
+      q = query(collection(db,'listings'), where('status','==','approved'), orderBy('createdAt','desc'));
     } else {
-      q = query(collection(db,'listings'), where('status','==','approved'), where('category','==',cat), orderBy('createdAt','desc'));
+      // Simple single-field query - no composite index needed
+      q = query(collection(db,'listings'), where('category','==',cat), where('status','==','approved'));
     }
     const snap  = await getDocs(q);
     const items = snap.docs.map(d => ({ id:d.id, ...d.data() }));
@@ -909,7 +932,7 @@ async function loadMyListings() {
   grid.innerHTML = skelGrid(3);
   try {
     const { collection, getDocs, query, where, orderBy } = window._fb;
-    const q = query(collection(window._db,'listings'), where('ownerUid','==',window.CU.uid), orderBy('createdAt','desc'));
+    const q = query(collection(window._db,'listings'), where('ownerUid','==',window.CU.uid));
     const snap  = await getDocs(q);
     const items = snap.docs.map(d => ({ id:d.id, ...d.data() }));
     if (!items.length) {
@@ -1097,7 +1120,7 @@ async function loadRiderBiz() {
   grid.innerHTML = skelGrid(3);
   try {
     const { collection, getDocs, query, where, orderBy } = window._fb;
-    const q = query(collection(window._db,'listings'), where('status','==','approved'), where('delivery','==',true), orderBy('createdAt','desc'));
+    const q = query(collection(window._db,'listings'), where('status','==','approved'), where('delivery','==',true));
     const snap  = await getDocs(q);
     const items = snap.docs.map(d => ({ id:d.id,...d.data() }));
     if (!items.length) { grid.innerHTML=`<div class="empty-state" style="grid-column:1/-1"><div class="icon">🏪</div><p>No delivery businesses yet.</p></div>`; return; }
@@ -1182,7 +1205,7 @@ async function loadPending() {
   wrap.innerHTML = skelGrid(3);
   try {
     const { collection, getDocs, query, where, orderBy } = window._fb;
-    const snap  = await getDocs(query(collection(window._db,'listings'), where('status','==','pending'), orderBy('createdAt','asc')));
+    const snap  = await getDocs(query(collection(window._db,'listings'), where('status','==','pending')));
     const items = snap.docs.map(d => ({ id:d.id,...d.data() }));
     if (!items.length) {
       wrap.innerHTML = `<div class="empty-state"><div class="icon">✅</div><p>All listings reviewed. Nothing pending.</p></div>`;
