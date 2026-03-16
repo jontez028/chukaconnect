@@ -3,15 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ChukaConnect — Campus Ecosystem</title>
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<title>ChukaConnect</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet">
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-  import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-analytics.js";
   import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged }
     from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-  import { getFirestore, collection, addDoc, getDocs, getDoc, doc, updateDoc, query, orderBy, serverTimestamp, where, deleteDoc }
+  import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, query, orderBy, serverTimestamp, where, deleteDoc }
     from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
   const firebaseConfig = {
@@ -20,839 +19,1248 @@
     projectId: "chukaconnect-34699",
     storageBucket: "chukaconnect-34699.firebasestorage.app",
     messagingSenderId: "316543740776",
-    appId: "1:316543740776:web:8dbba2db6a558f3636c4dd",
-    measurementId: "G-TZWXPQWBWX"
+    appId: "1:316543740776:web:8dbba2db6a558f3636c4dd"
   };
 
   const app = initializeApp(firebaseConfig);
-  const analytics = getAnalytics(app);
   const auth = getAuth(app);
-  const db = getFirestore(app);
+  const db   = getFirestore(app);
 
-  window.fbAuth = auth;
-  window.fbDb = db;
-  window.fbFns = { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, collection, addDoc, getDocs, getDoc, doc, updateDoc, query, orderBy, serverTimestamp, where, deleteDoc };
+  // Expose to global scope
+  window._auth = auth;
+  window._db   = db;
+  window._fb   = { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut,
+                   collection, addDoc, getDocs, doc, updateDoc, query,
+                   orderBy, serverTimestamp, where, deleteDoc };
 
-  onAuthStateChanged(auth, async (user) => {
-    if (!user) { showPage('landing'); return; }
+  onAuthStateChanged(auth, async user => {
+    if (!user) { showPage('auth'); return; }
     try {
-      const q = query(collection(db,'users'), where('uid','==',user.uid));
-      const snap = await getDocs(q);
+      const snap = await getDocs(query(collection(db,'users'), where('uid','==',user.uid)));
       if (!snap.empty) {
-        const profile = snap.docs[0].data();
-        window.currentUser = { ...profile, docId: snap.docs[0].id };
-        routeToDashboard(profile.role);
+        window.CU = { ...snap.docs[0].data(), _id: snap.docs[0].id };
+        route(window.CU.role);
       } else {
-        window.currentUser = { uid: user.uid, email: user.email };
-        showPage('landing');
+        await signOut(auth);
+        showPage('auth');
       }
-    } catch(e) { showPage('landing'); }
+    } catch(e) {
+      console.error('Auth routing error:', e);
+      showPage('auth');
+    }
   });
 </script>
 
 <style>
-:root{--primary:#6C63FF;--primary-dark:#4B44CC;--primary-light:#A89DFF;--accent:#38BDF8;--accent2:#A855F7;--green:#22C55E;--red:#EF4444;--orange:#F97316;--dark:#09090F;--dark2:#0F0F1A;--dark3:#161628;--card:#12121F;--text:#EEF0FF;--text-muted:#7B82A8;--text-dim:#3D4170;--border:rgba(108,99,255,0.18);--border-hover:rgba(108,99,255,0.45);--glow:0 0 30px rgba(108,99,255,0.2);--shadow:0 8px 32px rgba(0,0,0,0.5);--radius:16px;}
-*{margin:0;padding:0;box-sizing:border-box;}html{scroll-behavior:smooth;}
-body{font-family:'DM Sans',sans-serif;background:var(--dark);color:var(--text);overflow-x:hidden;line-height:1.6;}
-::-webkit-scrollbar{width:5px;}::-webkit-scrollbar-track{background:var(--dark2);}::-webkit-scrollbar-thumb{background:var(--primary-dark);border-radius:3px;}
-.page{display:none;min-height:100vh;}.page.active{display:block;}
-.btn{display:inline-flex;align-items:center;gap:0.4rem;padding:0.6rem 1.3rem;border-radius:10px;font-family:'DM Sans',sans-serif;font-size:0.88rem;font-weight:500;cursor:pointer;border:none;text-decoration:none;transition:all 0.25s;}
-.btn-primary{background:var(--primary);color:#fff;font-weight:600;}.btn-primary:hover{background:var(--primary-light);transform:translateY(-1px);}
-.btn-outline{background:transparent;border:1.5px solid var(--border-hover);color:var(--text);}.btn-outline:hover{border-color:var(--primary);color:var(--primary);}
-.btn-green{background:var(--green);color:#fff;font-weight:600;}.btn-red{background:var(--red);color:#fff;font-weight:600;}.btn-orange{background:var(--orange);color:#fff;font-weight:600;}
-.btn-lg{padding:0.9rem 2rem;font-size:1rem;border-radius:12px;}.btn-sm{padding:0.35rem 0.8rem;font-size:0.78rem;border-radius:7px;}.btn:disabled{opacity:0.6;cursor:not-allowed!important;transform:none!important;}
-.form-group{margin-bottom:1rem;}.form-label{font-size:0.82rem;font-weight:500;color:var(--text-muted);margin-bottom:0.4rem;display:block;}
-.form-input{width:100%;background:var(--dark3);border:1.5px solid var(--border);border-radius:10px;padding:0.75rem 1rem;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.9rem;outline:none;transition:border-color 0.2s;}.form-input:focus{border-color:var(--primary);}.form-input::placeholder{color:var(--text-dim);}
-.form-select{width:100%;background:var(--dark3);border:1.5px solid var(--border);border-radius:10px;padding:0.75rem 1rem;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.9rem;outline:none;appearance:none;cursor:pointer;}.form-select:focus{border-color:var(--primary);}
-.form-textarea{width:100%;background:var(--dark3);border:1.5px solid var(--border);border-radius:10px;padding:0.75rem 1rem;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.9rem;outline:none;resize:none;height:90px;}.form-textarea:focus{border-color:var(--primary);}
-.form-row{display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;}.form-error{font-size:0.78rem;color:var(--red);margin-top:0.4rem;display:none;padding:0.5rem 0.75rem;background:rgba(239,68,68,0.1);border-radius:8px;}
-.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:1.5rem;}
-.dash-shell{display:flex;min-height:100vh;}
-.sidebar{width:260px;background:var(--dark2);border-right:1px solid var(--border);padding:1.5rem 1rem;display:flex;flex-direction:column;gap:0.25rem;position:fixed;top:0;bottom:0;left:0;overflow-y:auto;z-index:100;transition:transform 0.3s;}
-.sidebar-logo{font-family:'Syne',sans-serif;font-size:1.3rem;font-weight:800;color:var(--primary);padding:0.5rem 0.75rem 1.25rem;}
-.sidebar-logo span{color:var(--text);}
-.sidebar-section{font-size:0.7rem;font-weight:600;text-transform:uppercase;letter-spacing:0.1em;color:var(--text-dim);padding:0.75rem 0.75rem 0.25rem;margin-top:0.5rem;}
-.nav-item{display:flex;align-items:center;gap:0.75rem;padding:0.65rem 0.75rem;border-radius:10px;cursor:pointer;color:var(--text-muted);font-size:0.88rem;font-weight:500;transition:all 0.2s;border:none;background:none;width:100%;text-align:left;}
-.nav-item:hover{background:rgba(108,99,255,0.08);color:var(--text);}.nav-item.active{background:rgba(108,99,255,0.15);color:var(--primary);font-weight:600;}
-.nav-icon{font-size:1.1rem;width:22px;text-align:center;}.nav-badge{background:var(--red);color:#fff;font-size:0.65rem;font-weight:700;padding:0.1rem 0.4rem;border-radius:100px;margin-left:auto;}
-.sidebar-bottom{margin-top:auto;padding-top:1rem;border-top:1px solid var(--border);}
-.sidebar-user{display:flex;align-items:center;gap:0.75rem;padding:0.75rem;}
-.user-avatar{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--primary),var(--accent2));display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.9rem;flex-shrink:0;}
-.user-name{font-size:0.85rem;font-weight:600;line-height:1.2;}.user-role{font-size:0.7rem;color:var(--text-muted);}
-.dash-main{margin-left:260px;flex:1;padding:2rem;min-height:100vh;}
-.dash-panel{display:none;}.dash-panel.active{display:block;}
-.dash-header{margin-bottom:2rem;}.dash-header h1{font-family:'Syne',sans-serif;font-size:1.8rem;font-weight:800;margin-bottom:0.25rem;}.dash-header p{color:var(--text-muted);font-size:0.9rem;}
-.stats-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1rem;margin-bottom:2rem;}
-.stat-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:1.25rem;}
-.stat-num{font-family:'Syne',sans-serif;font-size:2rem;font-weight:800;color:var(--primary);line-height:1;}.stat-label{font-size:0.78rem;color:var(--text-muted);margin-top:0.25rem;}
-.stat-card.green .stat-num{color:var(--green);}.stat-card.orange .stat-num{color:var(--orange);}.stat-card.blue .stat-num{color:var(--accent);}
-.listings-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(255px,1fr));gap:1.25rem;}
-.listing-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;transition:all 0.3s;}
-.listing-card:hover{border-color:var(--border-hover);transform:translateY(-3px);box-shadow:var(--glow);}
-.lcard-img{height:150px;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;background:var(--dark3);}
-.lcard-img img{width:100%;height:100%;object-fit:cover;}.emoji-big{font-size:3rem;}
-.pill{position:absolute;top:8px;right:8px;padding:0.18rem 0.55rem;border-radius:100px;font-size:0.65rem;font-weight:700;}
-.pill-approved{background:rgba(34,197,94,0.2);color:var(--green);}.pill-pending{background:rgba(249,115,22,0.2);color:var(--orange);}
-.pill-open{background:rgba(108,99,255,0.2);color:var(--primary);}.pill-rejected{background:rgba(239,68,68,0.2);color:var(--red);}
-.lcard-body{padding:1rem;}.lcard-body h4{font-family:'Syne',sans-serif;font-size:0.93rem;font-weight:700;margin-bottom:0.2rem;}
-.lcard-sub{font-size:0.77rem;color:var(--text-muted);margin-bottom:0.5rem;}.lcard-actions{display:flex;gap:0.5rem;margin-top:0.75rem;flex-wrap:wrap;}
-.upload-area{border:2px dashed var(--border);border-radius:12px;padding:1.25rem;text-align:center;cursor:pointer;transition:all 0.2s;position:relative;background:var(--dark3);}
-.upload-area:hover{border-color:var(--primary);background:rgba(108,99,255,0.05);}
-.upload-area input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
-.img-preview{width:100%;height:130px;object-fit:cover;border-radius:10px;margin-top:0.75rem;display:none;}
-.progress-wrap{display:none;margin-top:0.75rem;}.progress-track{background:var(--dark2);border-radius:100px;height:6px;overflow:hidden;}
-.progress-fill{height:100%;background:linear-gradient(90deg,var(--primary),var(--accent2));border-radius:100px;transition:width 0.3s;width:0%;}
-.progress-label{font-size:0.72rem;color:var(--text-muted);margin-top:0.3rem;text-align:center;}
-.amenities-wrap{display:flex;flex-wrap:wrap;gap:0.5rem;margin-top:0.5rem;}
-.amenity-label{display:flex;align-items:center;gap:0.4rem;font-size:0.82rem;cursor:pointer;background:var(--dark3);border:1px solid var(--border);padding:0.3rem 0.7rem;border-radius:8px;transition:all 0.2s;}
-.amenity-label input{accent-color:var(--primary);}.amenity-label:hover{border-color:var(--primary);}
-.data-table{width:100%;border-collapse:collapse;font-size:0.85rem;}
-.data-table th{text-align:left;padding:0.75rem 1rem;font-size:0.72rem;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;border-bottom:1px solid var(--border);}
-.data-table td{padding:0.85rem 1rem;border-bottom:1px solid rgba(108,99,255,0.07);vertical-align:middle;}
-.data-table tr:hover td{background:rgba(108,99,255,0.04);}
-.status-badge{padding:0.2rem 0.6rem;border-radius:100px;font-size:0.72rem;font-weight:700;display:inline-block;}
-.empty{text-align:center;padding:3rem 1rem;color:var(--text-muted);grid-column:1/-1;}
-.empty .ei{font-size:3rem;margin-bottom:0.75rem;}.empty p{font-size:0.9rem;margin-bottom:1rem;}
-.spinner{display:inline-block;width:20px;height:20px;border:2px solid rgba(108,99,255,0.3);border-top-color:var(--primary);border-radius:50%;animation:spin 0.8s linear infinite;}
-@keyframes spin{to{transform:rotate(360deg);}}
-.loading-block{text-align:center;padding:3rem;color:var(--text-muted);grid-column:1/-1;}
-.toast{position:fixed;bottom:2rem;right:2rem;z-index:3000;background:var(--card);border:1px solid var(--primary);border-radius:12px;padding:1rem 1.5rem;display:flex;align-items:center;gap:0.75rem;box-shadow:var(--shadow);max-width:340px;transform:translateX(120%);transition:transform 0.4s cubic-bezier(0.34,1.56,0.64,1);}
-.toast.show{transform:translateX(0);}.toast-msg strong{display:block;font-weight:600;font-size:0.9rem;}.toast-msg span{font-size:0.82rem;color:var(--text-muted);}
-
-/* LANDING */
-#page-landing{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:1.5rem;background:var(--dark);}
-.landing-wrap{width:100%;max-width:420px;position:relative;z-index:1;}
-.landing-logo{font-family:'Syne',sans-serif;font-size:2rem;font-weight:800;color:var(--primary);text-align:center;margin-bottom:0.35rem;}
-.landing-logo span{color:var(--text);}
-.landing-tag{text-align:center;color:var(--text-muted);font-size:0.88rem;margin-bottom:1.75rem;}
-.auth-tabs{display:flex;background:var(--dark2);border-radius:12px;padding:4px;margin-bottom:1.5rem;}
-.auth-tab{flex:1;padding:0.6rem;text-align:center;border-radius:9px;cursor:pointer;font-size:0.88rem;font-weight:500;color:var(--text-muted);border:none;background:none;transition:all 0.2s;}
-.auth-tab.active{background:var(--primary);color:#fff;font-weight:600;}
-.auth-panel{display:none;}.auth-panel.active{display:block;}
-.role-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:0.75rem;margin-bottom:1.25rem;}
-.role-card{background:var(--dark3);border:2px solid var(--border);border-radius:12px;padding:1rem 0.5rem;text-align:center;cursor:pointer;transition:all 0.2s;}
-.role-card:hover,.role-card.selected{border-color:var(--primary);background:rgba(108,99,255,0.1);}
-.role-icon{font-size:1.8rem;margin-bottom:0.4rem;}.role-name{font-size:0.78rem;font-weight:600;color:var(--text-muted);}
-.role-card.selected .role-name{color:var(--primary);}
-.submit-btn{width:100%;background:var(--primary);border:none;border-radius:10px;padding:0.9rem;color:#fff;font-family:'Syne',sans-serif;font-weight:700;font-size:0.95rem;cursor:pointer;transition:all 0.2s;margin-top:0.25rem;}
-.submit-btn:hover{background:var(--primary-light);}.submit-btn:disabled{opacity:0.6;cursor:not-allowed;}
-
-.sidebar-toggle{display:none;position:fixed;top:1rem;left:1rem;z-index:200;background:var(--card);border:1px solid var(--border);border-radius:10px;width:40px;height:40px;align-items:center;justify-content:center;cursor:pointer;font-size:1.2rem;border:none;}
-.sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:99;}
-
-@media(max-width:900px){
-  .sidebar{transform:translateX(-100%);}.sidebar.open{transform:translateX(0);}
-  .sidebar-overlay.open{display:block;}.sidebar-toggle{display:flex;}
-  .dash-main{margin-left:0;padding:1.25rem;padding-top:4.5rem;}
-  .form-row{grid-template-columns:1fr;}
-  .stats-row{grid-template-columns:1fr 1fr;}
+/* ── TOKENS ─────────────────────────── */
+:root {
+  --blue:       #2563EB;
+  --blue-dark:  #1D4ED8;
+  --blue-light: #EFF6FF;
+  --blue-mid:   #BFDBFE;
+  --indigo:     #4F46E5;
+  --green:      #16A34A;
+  --green-bg:   #F0FDF4;
+  --red:        #DC2626;
+  --red-bg:     #FEF2F2;
+  --amber:      #D97706;
+  --amber-bg:   #FFFBEB;
+  --gray-50:    #F9FAFB;
+  --gray-100:   #F3F4F6;
+  --gray-200:   #E5E7EB;
+  --gray-300:   #D1D5DB;
+  --gray-400:   #9CA3AF;
+  --gray-500:   #6B7280;
+  --gray-600:   #4B5563;
+  --gray-700:   #374151;
+  --gray-800:   #1F2937;
+  --gray-900:   #111827;
+  --white:      #FFFFFF;
+  --r-sm:       6px;
+  --r-md:       10px;
+  --r-lg:       14px;
+  --shadow-sm:  0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-md:  0 4px 12px rgba(0,0,0,0.08), 0 2px 6px rgba(0,0,0,0.04);
+  --shadow-lg:  0 10px 30px rgba(0,0,0,0.1), 0 4px 12px rgba(0,0,0,0.06);
+  --ease:       cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-out:   cubic-bezier(0, 0, 0.2, 1);
 }
-@media(max-width:520px){
-  .listings-grid{grid-template-columns:1fr;}
-  .stats-row{grid-template-columns:1fr;}
-  .dash-header h1{font-size:1.4rem;}
+
+/* ── RESET ───────────────────────────── */
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+html { scroll-behavior:smooth; font-size:16px; }
+body { font-family:'Inter',sans-serif; background:var(--gray-50); color:var(--gray-900); line-height:1.5; -webkit-font-smoothing:antialiased; }
+::-webkit-scrollbar { width:6px; }
+::-webkit-scrollbar-track { background:var(--gray-100); }
+::-webkit-scrollbar-thumb { background:var(--gray-300); border-radius:3px; }
+img { display:block; max-width:100%; }
+button { font-family:inherit; }
+
+/* ── PAGES ───────────────────────────── */
+.page { display:none; }
+.page.active { display:block; }
+
+/* ── TYPOGRAPHY ──────────────────────── */
+.t-h1 { font-family:'Manrope',sans-serif; font-size:1.75rem; font-weight:800; line-height:1.2; letter-spacing:-0.02em; }
+.t-h2 { font-family:'Manrope',sans-serif; font-size:1.25rem; font-weight:700; line-height:1.3; letter-spacing:-0.01em; }
+.t-h3 { font-family:'Manrope',sans-serif; font-size:1rem; font-weight:700; line-height:1.4; }
+.t-body { font-size:0.9rem; line-height:1.6; color:var(--gray-600); }
+.t-sm { font-size:0.8rem; line-height:1.5; color:var(--gray-500); }
+.t-xs { font-size:0.72rem; line-height:1.4; color:var(--gray-400); }
+
+/* ── BUTTONS ─────────────────────────── */
+.btn {
+  display:inline-flex; align-items:center; justify-content:center; gap:6px;
+  font-family:inherit; font-size:0.875rem; font-weight:600; line-height:1;
+  border:none; border-radius:var(--r-md); cursor:pointer;
+  transition:background 150ms var(--ease), transform 150ms var(--ease), box-shadow 150ms var(--ease), opacity 150ms;
+  white-space:nowrap; text-decoration:none;
+}
+.btn:disabled { opacity:0.55; cursor:not-allowed; transform:none !important; }
+.btn-primary { background:var(--blue); color:var(--white); padding:10px 20px; }
+.btn-primary:hover:not(:disabled) { background:var(--blue-dark); transform:translateY(-1px); box-shadow:var(--shadow-sm); }
+.btn-secondary { background:var(--white); color:var(--gray-700); border:1px solid var(--gray-200); padding:10px 20px; }
+.btn-secondary:hover:not(:disabled) { background:var(--gray-50); border-color:var(--gray-300); transform:translateY(-1px); }
+.btn-danger { background:var(--red); color:var(--white); padding:8px 16px; }
+.btn-danger:hover:not(:disabled) { background:#B91C1C; }
+.btn-success { background:var(--green); color:var(--white); padding:8px 16px; }
+.btn-success:hover:not(:disabled) { background:#15803D; }
+.btn-ghost { background:transparent; color:var(--gray-600); padding:8px 14px; }
+.btn-ghost:hover:not(:disabled) { background:var(--gray-100); color:var(--gray-800); }
+.btn-full { width:100%; padding:12px 20px; font-size:0.9375rem; border-radius:var(--r-md); }
+.btn-sm { padding:6px 12px; font-size:0.8125rem; border-radius:var(--r-sm); }
+.btn-loading { position:relative; color:transparent !important; }
+.btn-loading::after { content:''; position:absolute; width:14px; height:14px; border:2px solid rgba(255,255,255,0.4); border-top-color:#fff; border-radius:50%; animation:spin 0.7s linear infinite; }
+
+/* ── FORMS ───────────────────────────── */
+.field { margin-bottom:1rem; }
+.field-label { display:block; font-size:0.8125rem; font-weight:600; color:var(--gray-700); margin-bottom:5px; }
+.field-input {
+  width:100%; padding:10px 12px;
+  font-family:inherit; font-size:0.9rem; color:var(--gray-900);
+  background:var(--white); border:1px solid var(--gray-200);
+  border-radius:var(--r-md); outline:none;
+  transition:border-color 150ms var(--ease), box-shadow 150ms var(--ease);
+}
+.field-input:focus { border-color:var(--blue); box-shadow:0 0 0 3px rgba(37,99,235,0.1); }
+.field-input::placeholder { color:var(--gray-400); }
+.field-input:disabled { background:var(--gray-50); color:var(--gray-500); }
+textarea.field-input { resize:none; height:88px; }
+select.field-input { appearance:none; cursor:pointer; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236B7280' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 12px center; padding-right:36px; }
+.field-error { display:none; font-size:0.78rem; color:var(--red); margin-top:4px; }
+.field-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+
+/* ── CARDS ───────────────────────────── */
+.card { background:var(--white); border:1px solid var(--gray-200); border-radius:var(--r-lg); padding:20px; }
+.card-sm { background:var(--white); border:1px solid var(--gray-200); border-radius:var(--r-md); padding:14px; }
+
+/* ── BADGES ──────────────────────────── */
+.badge { display:inline-flex; align-items:center; gap:4px; padding:3px 8px; border-radius:100px; font-size:0.72rem; font-weight:600; }
+.badge-blue { background:var(--blue-light); color:var(--blue); }
+.badge-green { background:var(--green-bg); color:var(--green); }
+.badge-amber { background:var(--amber-bg); color:var(--amber); }
+.badge-red { background:var(--red-bg); color:var(--red); }
+.badge-gray { background:var(--gray-100); color:var(--gray-600); }
+
+/* ── SKELETON ────────────────────────── */
+.skel { background:linear-gradient(90deg, var(--gray-100) 25%, var(--gray-200) 50%, var(--gray-100) 75%); background-size:200% 100%; animation:shimmer 1.4s infinite; border-radius:var(--r-sm); }
+@keyframes shimmer { to { background-position:-200% 0; } }
+.skel-card { height:220px; border-radius:var(--r-lg); margin-bottom:0; }
+
+/* ── SPINNER ─────────────────────────── */
+.spinner { width:18px; height:18px; border:2px solid var(--gray-200); border-top-color:var(--blue); border-radius:50%; animation:spin 0.7s linear infinite; display:inline-block; }
+.spinner-sm { width:14px; height:14px; }
+@keyframes spin { to { transform:rotate(360deg); } }
+
+/* ── EMPTY STATE ─────────────────────── */
+.empty-state { text-align:center; padding:48px 24px; color:var(--gray-500); }
+.empty-state .icon { font-size:2.5rem; margin-bottom:12px; opacity:0.6; }
+.empty-state p { font-size:0.9rem; margin-bottom:16px; }
+
+/* ════════════════════════════════════════
+   AUTH PAGE
+════════════════════════════════════════ */
+#page-auth {
+  min-height:100vh; display:flex;
+  background:var(--white);
+}
+.auth-left {
+  flex:1; display:flex; flex-direction:column; justify-content:center;
+  padding:48px; max-width:480px;
+}
+.auth-right {
+  flex:1; background:var(--gray-900);
+  display:flex; flex-direction:column; justify-content:center; padding:64px;
+  position:relative; overflow:hidden;
+}
+.auth-right::before {
+  content:''; position:absolute; inset:0;
+  background:radial-gradient(ellipse 80% 60% at 30% 40%, rgba(37,99,235,0.25), transparent 60%),
+             radial-gradient(ellipse 60% 50% at 80% 70%, rgba(79,70,229,0.2), transparent 60%);
+}
+.auth-brand { font-family:'Manrope',sans-serif; font-size:1.5rem; font-weight:800; color:var(--blue); margin-bottom:32px; }
+.auth-brand span { color:var(--gray-900); }
+.auth-tabs { display:flex; background:var(--gray-100); border-radius:var(--r-md); padding:3px; margin-bottom:24px; }
+.auth-tab { flex:1; padding:8px; text-align:center; border-radius:8px; cursor:pointer; font-size:0.875rem; font-weight:600; color:var(--gray-500); border:none; background:none; transition:all 150ms var(--ease); }
+.auth-tab.active { background:var(--white); color:var(--gray-900); box-shadow:var(--shadow-sm); }
+.auth-panel { display:none; }
+.auth-panel.active { display:block; }
+.role-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:16px; }
+.role-card { background:var(--gray-50); border:1.5px solid var(--gray-200); border-radius:var(--r-md); padding:14px 8px; text-align:center; cursor:pointer; transition:all 150ms var(--ease); }
+.role-card:hover { border-color:var(--blue-mid); background:var(--blue-light); }
+.role-card.active { border-color:var(--blue); background:var(--blue-light); }
+.role-card .ri { font-size:1.5rem; margin-bottom:6px; }
+.role-card .rl { font-size:0.75rem; font-weight:600; color:var(--gray-600); }
+.role-card.active .rl { color:var(--blue); }
+.auth-divider { text-align:center; font-size:0.8rem; color:var(--gray-400); margin:12px 0; }
+.auth-right-content { position:relative; z-index:1; }
+.auth-tagline { font-family:'Manrope',sans-serif; font-size:2rem; font-weight:800; color:var(--white); line-height:1.25; margin-bottom:16px; letter-spacing:-0.02em; }
+.auth-sub { font-size:0.9rem; color:rgba(255,255,255,0.55); line-height:1.7; margin-bottom:32px; }
+.feature-list { display:flex; flex-direction:column; gap:10px; }
+.feature-item { display:flex; align-items:center; gap:10px; }
+.feature-dot { width:6px; height:6px; background:var(--blue); border-radius:50%; flex-shrink:0; }
+.feature-text { font-size:0.875rem; color:rgba(255,255,255,0.7); }
+
+/* ════════════════════════════════════════
+   DASHBOARD SHELL
+════════════════════════════════════════ */
+#page-dashboard { display:flex; min-height:100vh; }
+.sidebar {
+  width:240px; background:var(--white); border-right:1px solid var(--gray-200);
+  display:flex; flex-direction:column;
+  position:fixed; top:0; bottom:0; left:0;
+  overflow-y:auto; z-index:100;
+  transition:transform 250ms var(--ease-out);
+}
+.sb-logo { font-family:'Manrope',sans-serif; font-size:1.1rem; font-weight:800; color:var(--blue); padding:20px 16px 16px; border-bottom:1px solid var(--gray-100); }
+.sb-logo span { color:var(--gray-900); }
+.sb-section { font-size:0.68rem; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; color:var(--gray-400); padding:16px 16px 4px; }
+.sb-nav { flex:1; padding:8px; }
+.nav-btn {
+  display:flex; align-items:center; gap:10px; width:100%;
+  padding:8px 10px; border-radius:var(--r-md); border:none; background:none;
+  font-family:inherit; font-size:0.875rem; font-weight:500; color:var(--gray-600);
+  cursor:pointer; transition:all 120ms var(--ease); text-align:left;
+}
+.nav-btn:hover { background:var(--gray-100); color:var(--gray-900); }
+.nav-btn.active { background:var(--blue-light); color:var(--blue); font-weight:600; }
+.nav-btn .ni { font-size:1rem; width:18px; text-align:center; flex-shrink:0; }
+.nav-cnt { background:var(--red); color:var(--white); font-size:0.65rem; font-weight:700; padding:1px 5px; border-radius:100px; margin-left:auto; }
+.sb-user { padding:12px 16px; border-top:1px solid var(--gray-100); display:flex; align-items:center; gap:10px; }
+.sb-avatar { width:32px; height:32px; border-radius:50%; background:var(--blue); color:var(--white); display:flex; align-items:center; justify-content:center; font-weight:700; font-size:0.85rem; flex-shrink:0; }
+.sb-uinfo { flex:1; min-width:0; }
+.sb-uname { font-size:0.825rem; font-weight:600; color:var(--gray-900); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.sb-urole { font-size:0.72rem; color:var(--gray-500); }
+.main { margin-left:240px; flex:1; padding:28px; min-height:100vh; }
+.panel { display:none; }
+.panel.active { display:block; animation:fadeIn 180ms var(--ease-out); }
+@keyframes fadeIn { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
+.panel-header { margin-bottom:24px; }
+.panel-header h1 { font-family:'Manrope',sans-serif; font-size:1.375rem; font-weight:800; color:var(--gray-900); letter-spacing:-0.01em; }
+.panel-header p { font-size:0.875rem; color:var(--gray-500); margin-top:2px; }
+
+/* ── STATS GRID ──────────────────────── */
+.stats-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:12px; margin-bottom:24px; }
+.stat-tile { background:var(--white); border:1px solid var(--gray-200); border-radius:var(--r-lg); padding:16px; }
+.stat-tile .n { font-family:'Manrope',sans-serif; font-size:1.75rem; font-weight:800; color:var(--gray-900); line-height:1; }
+.stat-tile .l { font-size:0.78rem; color:var(--gray-500); margin-top:4px; }
+.stat-tile.blue .n { color:var(--blue); }
+.stat-tile.green .n { color:var(--green); }
+.stat-tile.amber .n { color:var(--amber); }
+
+/* ── LISTING GRID ────────────────────── */
+.listings-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:16px; }
+.lcard { background:var(--white); border:1px solid var(--gray-200); border-radius:var(--r-lg); overflow:hidden; transition:box-shadow 200ms var(--ease), transform 200ms var(--ease); }
+.lcard:hover { box-shadow:var(--shadow-md); transform:translateY(-2px); }
+.lcard-img { height:148px; display:flex; align-items:center; justify-content:center; position:relative; overflow:hidden; background:var(--gray-100); }
+.lcard-img img { width:100%; height:100%; object-fit:cover; }
+.lcard-img .cat-icon { font-size:2.5rem; }
+.lcard-badge { position:absolute; top:8px; right:8px; }
+.lcard-body { padding:14px; }
+.lcard-name { font-size:0.9375rem; font-weight:700; color:var(--gray-900); margin-bottom:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.lcard-meta { font-size:0.78rem; color:var(--gray-500); margin-bottom:8px; }
+.lcard-tags { display:flex; gap:4px; flex-wrap:wrap; margin-bottom:8px; }
+.lcard-tag { background:var(--gray-100); color:var(--gray-600); font-size:0.68rem; padding:2px 7px; border-radius:100px; }
+.lcard-price { font-family:'Manrope',sans-serif; font-weight:700; font-size:0.9rem; color:var(--blue); }
+.lcard-actions { display:flex; gap:6px; margin-top:10px; }
+
+/* ── TABLE ───────────────────────────── */
+.data-table { width:100%; border-collapse:collapse; font-size:0.875rem; }
+.data-table th { text-align:left; padding:10px 14px; font-size:0.72rem; font-weight:700; text-transform:uppercase; letter-spacing:0.06em; color:var(--gray-500); border-bottom:1px solid var(--gray-200); background:var(--gray-50); }
+.data-table td { padding:12px 14px; border-bottom:1px solid var(--gray-100); vertical-align:middle; }
+.data-table tr:last-child td { border-bottom:none; }
+.data-table tr:hover td { background:var(--gray-50); }
+
+/* ── IMAGE UPLOAD ────────────────────── */
+.upload-zone { border:1.5px dashed var(--gray-300); border-radius:var(--r-md); padding:20px; text-align:center; cursor:pointer; transition:all 150ms var(--ease); position:relative; background:var(--gray-50); }
+.upload-zone:hover { border-color:var(--blue); background:var(--blue-light); }
+.upload-zone input[type=file] { position:absolute; inset:0; opacity:0; cursor:pointer; }
+.upload-zone .uz-icon { font-size:1.75rem; margin-bottom:6px; }
+.upload-zone p { font-size:0.8125rem; color:var(--gray-500); }
+.upload-zone .uz-hint { font-size:0.72rem; color:var(--gray-400); margin-top:2px; }
+.preview-img { width:100%; height:120px; object-fit:cover; border-radius:var(--r-md); margin-top:10px; display:none; }
+.upload-progress { display:none; margin-top:10px; }
+.prog-track { background:var(--gray-200); border-radius:100px; height:4px; overflow:hidden; }
+.prog-fill { height:100%; background:var(--blue); border-radius:100px; transition:width 250ms var(--ease); width:0%; }
+.prog-label { font-size:0.72rem; color:var(--gray-500); margin-top:4px; }
+
+/* ── AMENITIES ───────────────────────── */
+.amenities-wrap { display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; }
+.amen-label { display:flex; align-items:center; gap:5px; font-size:0.8rem; cursor:pointer; background:var(--gray-100); border:1px solid var(--gray-200); padding:5px 10px; border-radius:100px; transition:all 120ms; color:var(--gray-600); }
+.amen-label input { accent-color:var(--blue); }
+.amen-label:hover { border-color:var(--blue-mid); background:var(--blue-light); color:var(--blue); }
+
+/* ── MOBILE TOGGLE ───────────────────── */
+.sb-toggle { display:none; position:fixed; top:12px; left:12px; z-index:200; background:var(--white); border:1px solid var(--gray-200); border-radius:var(--r-md); width:38px; height:38px; align-items:center; justify-content:center; cursor:pointer; box-shadow:var(--shadow-sm); font-size:1.1rem; }
+.sb-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.3); z-index:99; }
+
+/* ── TOAST ───────────────────────────── */
+.toast { position:fixed; bottom:20px; right:20px; z-index:9999; background:var(--gray-900); color:var(--white); border-radius:var(--r-md); padding:12px 16px; display:flex; align-items:center; gap:10px; max-width:320px; box-shadow:var(--shadow-lg); transform:translateY(80px); opacity:0; transition:transform 300ms var(--ease-out), opacity 300ms var(--ease-out); pointer-events:none; }
+.toast.show { transform:translateY(0); opacity:1; }
+.toast-msg { font-size:0.875rem; }
+.toast-msg strong { display:block; font-weight:600; }
+.toast-msg span { font-size:0.8rem; opacity:0.75; }
+
+/* ── ALERT BOX ───────────────────────── */
+.alert { padding:12px 14px; border-radius:var(--r-md); font-size:0.875rem; margin-bottom:16px; border-left:3px solid; }
+.alert-info { background:var(--blue-light); color:#1E40AF; border-color:var(--blue); }
+.alert-warn { background:var(--amber-bg); color:#92400E; border-color:var(--amber); }
+
+/* ── RESPONSIVE ──────────────────────── */
+@media(max-width:900px) {
+  .auth-right { display:none; }
+  .auth-left { max-width:100%; padding:32px 24px; }
+  .sidebar { transform:translateX(-100%); }
+  .sidebar.open { transform:translateX(0); }
+  .sb-overlay.open { display:block; }
+  .sb-toggle { display:flex; }
+  .main { margin-left:0; padding:16px; padding-top:60px; }
+  .field-row { grid-template-columns:1fr; }
+  .stats-grid { grid-template-columns:1fr 1fr; }
+}
+@media(max-width:520px) {
+  .listings-grid { grid-template-columns:1fr; }
+  .stats-grid { grid-template-columns:1fr; }
+  .auth-left { padding:24px 20px; }
 }
 </style>
 </head>
 <body>
 
-<!-- ══ LANDING / AUTH ══ -->
-<div id="page-landing" class="page active">
-  <div style="position:absolute;inset:0;background:radial-gradient(ellipse 70% 60% at 50% 40%,rgba(108,99,255,0.12),transparent 70%);pointer-events:none"></div>
-  <div class="landing-wrap">
-    <div class="landing-logo">Chuka<span>Connect</span></div>
-    <p class="landing-tag">Hostels · Food · Shops · Boda Boda · Payments</p>
-    <div class="card">
-      <div class="auth-tabs">
-        <button class="auth-tab active" onclick="switchTab('login')">Log In</button>
-        <button class="auth-tab" onclick="switchTab('signup')">Sign Up</button>
+<!-- ════════════════════════════════════════
+     AUTH PAGE
+════════════════════════════════════════ -->
+<div id="page-auth" class="page active">
+  <div class="auth-left">
+    <div class="auth-brand">Chuka<span>Connect</span></div>
+
+    <div class="auth-tabs">
+      <button class="auth-tab active" onclick="switchTab('login')">Sign in</button>
+      <button class="auth-tab" onclick="switchTab('register')">Create account</button>
+    </div>
+
+    <!-- SIGN IN -->
+    <div id="tab-login" class="auth-panel active">
+      <div class="field">
+        <label class="field-label">Email address</label>
+        <input class="field-input" id="li_email" type="email" placeholder="you@chuka.ac.ke" autocomplete="email">
       </div>
-      <!-- LOGIN -->
-      <div id="auth-login" class="auth-panel active">
-        <div class="form-group"><label class="form-label">Email</label><input class="form-input" id="li_email" type="email" placeholder="you@chuka.ac.ke"></div>
-        <div class="form-group"><label class="form-label">Password</label><input class="form-input" id="li_pw" type="password" placeholder="Your password"></div>
-        <div class="form-error" id="li_err"></div>
-        <button class="submit-btn" id="li_btn" onclick="doLogin()">Log In to ChukaConnect</button>
-        <p style="text-align:center;font-size:0.78rem;color:var(--text-muted);margin-top:1rem">No account? <a href="#" onclick="switchTab('signup')" style="color:var(--primary)">Sign up free →</a></p>
+      <div class="field">
+        <label class="field-label">Password</label>
+        <input class="field-input" id="li_pw" type="password" placeholder="Your password" autocomplete="current-password">
+        <div class="field-error" id="li_err"></div>
       </div>
-      <!-- SIGN UP -->
-      <div id="auth-signup" class="auth-panel">
-        <div class="form-group">
-          <label class="form-label">I am a</label>
-          <div class="role-grid">
-            <div class="role-card selected" onclick="pickRole(this,'student')"><div class="role-icon">🎓</div><div class="role-name">Student</div></div>
-            <div class="role-card" onclick="pickRole(this,'business')"><div class="role-icon">🏪</div><div class="role-name">Business</div></div>
-            <div class="role-card" onclick="pickRole(this,'rider')"><div class="role-icon">🏍️</div><div class="role-name">Rider</div></div>
-          </div>
-          <input type="hidden" id="su_role" value="student">
+      <button class="btn btn-primary btn-full" id="li_btn" onclick="doLogin()">Sign in</button>
+      <p style="text-align:center;font-size:0.8125rem;color:var(--gray-500);margin-top:16px">
+        No account? <a href="#" onclick="switchTab('register')" style="color:var(--blue);font-weight:600">Create one free</a>
+      </p>
+    </div>
+
+    <!-- REGISTER -->
+    <div id="tab-register" class="auth-panel">
+      <div class="field">
+        <label class="field-label">I am a</label>
+        <div class="role-grid">
+          <div class="role-card active" onclick="pickRole(this,'student')"><div class="ri">🎓</div><div class="rl">Student</div></div>
+          <div class="role-card" onclick="pickRole(this,'business')"><div class="ri">🏪</div><div class="rl">Business</div></div>
+          <div class="role-card" onclick="pickRole(this,'rider')"><div class="ri">🏍️</div><div class="rl">Rider</div></div>
         </div>
-        <div class="form-row">
-          <div class="form-group"><label class="form-label">First Name *</label><input class="form-input" id="su_fn" placeholder="John"></div>
-          <div class="form-group"><label class="form-label">Last Name *</label><input class="form-input" id="su_ln" placeholder="Kamau"></div>
-        </div>
-        <div class="form-group"><label class="form-label">Email *</label><input class="form-input" id="su_email" type="email" placeholder="you@chuka.ac.ke"></div>
-        <div class="form-group"><label class="form-label">M-Pesa Phone</label><input class="form-input" id="su_phone" type="tel" placeholder="0712 345 678"></div>
-        <div class="form-group"><label class="form-label">Password * (min 6 chars)</label><input class="form-input" id="su_pw" type="password" placeholder="Create a password"></div>
-        <div class="form-error" id="su_err"></div>
-        <button class="submit-btn" id="su_btn" onclick="doSignUp()">Create My Account</button>
-        <p style="text-align:center;font-size:0.78rem;color:var(--text-muted);margin-top:1rem">Already registered? <a href="#" onclick="switchTab('login')" style="color:var(--primary)">Log in →</a></p>
+        <input type="hidden" id="su_role" value="student">
+      </div>
+      <div class="field-row">
+        <div class="field"><label class="field-label">First name</label><input class="field-input" id="su_fn" placeholder="John" autocomplete="given-name"></div>
+        <div class="field"><label class="field-label">Last name</label><input class="field-input" id="su_ln" placeholder="Kamau" autocomplete="family-name"></div>
+      </div>
+      <div class="field"><label class="field-label">Email address</label><input class="field-input" id="su_email" type="email" placeholder="you@chuka.ac.ke" autocomplete="email"></div>
+      <div class="field"><label class="field-label">M-Pesa phone</label><input class="field-input" id="su_phone" type="tel" placeholder="0712 345 678"></div>
+      <div class="field"><label class="field-label">Password <span style="color:var(--gray-400);font-weight:400">(min. 6 characters)</span></label><input class="field-input" id="su_pw" type="password" placeholder="Create a password" autocomplete="new-password"></div>
+      <div class="field-error" id="su_err"></div>
+      <button class="btn btn-primary btn-full" id="su_btn" onclick="doRegister()">Create account</button>
+      <p style="text-align:center;font-size:0.8125rem;color:var(--gray-500);margin-top:16px">
+        Already registered? <a href="#" onclick="switchTab('login')" style="color:var(--blue);font-weight:600">Sign in</a>
+      </p>
+    </div>
+  </div>
+
+  <div class="auth-right">
+    <div class="auth-right-content">
+      <p class="auth-tagline">Everything you need around Chuka University.</p>
+      <p class="auth-sub">Hostels, food, chemists, shops, and boda boda riders connected in one platform.</p>
+      <div class="feature-list">
+        <div class="feature-item"><div class="feature-dot"></div><span class="feature-text">Browse verified hostels within 70km of campus</span></div>
+        <div class="feature-item"><div class="feature-dot"></div><span class="feature-text">Order food and groceries with boda delivery</span></div>
+        <div class="feature-item"><div class="feature-dot"></div><span class="feature-text">Find chemists, salons, and social amenities</span></div>
+        <div class="feature-item"><div class="feature-dot"></div><span class="feature-text">Pay securely with M-Pesa</span></div>
       </div>
     </div>
   </div>
 </div>
 
-<!-- ══ DASHBOARD SHELL ══ -->
+<!-- ════════════════════════════════════════
+     DASHBOARD
+════════════════════════════════════════ -->
 <div id="page-dashboard" class="page">
-  <button class="sidebar-toggle" onclick="toggleSidebar()">☰</button>
-  <div class="sidebar-overlay" id="sbOverlay" onclick="toggleSidebar()"></div>
+  <button class="sb-toggle" onclick="toggleSb()">☰</button>
+  <div class="sb-overlay" id="sbOverlay" onclick="toggleSb()"></div>
+
   <div class="sidebar" id="sidebar">
-    <div class="sidebar-logo">Chuka<span>Connect</span></div>
-    <div id="sidebarNav"></div>
-    <div class="sidebar-bottom">
-      <div class="sidebar-user">
-        <div class="user-avatar" id="sbAvatar">U</div>
-        <div><div class="user-name" id="sbName">—</div><div class="user-role" id="sbRole">—</div></div>
+    <div class="sb-logo">Chuka<span>Connect</span></div>
+    <div class="sb-nav" id="sbNav"></div>
+    <div class="sb-user">
+      <div class="sb-avatar" id="sbAvatar">U</div>
+      <div class="sb-uinfo">
+        <div class="sb-uname" id="sbName">Loading</div>
+        <div class="sb-urole" id="sbRole"></div>
       </div>
-      <button class="nav-item" onclick="doLogout()" style="color:var(--red)"><span class="nav-icon">🚪</span> Log Out</button>
+      <button class="btn btn-ghost btn-sm" onclick="doLogout()" title="Sign out" style="padding:6px;font-size:1rem;color:var(--gray-400)">→</button>
     </div>
   </div>
-  <div class="dash-main" id="dashMain"></div>
+
+  <main class="main" id="dashMain"></main>
 </div>
 
 <!-- TOAST -->
 <div class="toast" id="toast">
-  <span id="tIcon" style="font-size:1.4rem">✅</span>
-  <div class="toast-msg"><strong id="tTitle"></strong><span id="tBody"></span></div>
+  <span id="t_icon" style="font-size:1.1rem"></span>
+  <div class="toast-msg"><strong id="t_title"></strong><span id="t_body"></span></div>
 </div>
 
 <script>
-// ══ CONFIG ══
-const CC = 'ddqizc83f', CP = 'uz6jp648';
-const ADMIN_EMAIL = 'johnnjenga9097@gmail.com';
-const CAT = {
-  food:{e:'🍽️',c:'rgba(108,99,255,0.15)',l:'Food'},
-  mama_mboga:{e:'🥦',c:'rgba(56,189,248,0.15)',l:'Groceries'},
-  chemist:{e:'💊',c:'rgba(168,85,247,0.15)',l:'Chemist'},
-  shop:{e:'🛍️',c:'rgba(108,99,255,0.12)',l:'Shop'},
-  hostel:{e:'🏠',c:'rgba(56,189,248,0.12)',l:'Hostel'},
-  boda:{e:'🏍️',c:'rgba(168,85,247,0.12)',l:'Boda Boda'},
-  salon:{e:'✂️',c:'rgba(108,99,255,0.12)',l:'Salon'},
-  other:{e:'📌',c:'rgba(56,189,248,0.12)',l:'Other'},
+'use strict';
+
+// ── CONSTANTS ──────────────────────────
+const CLOUDINARY_CLOUD  = 'ddqizc83f';
+const CLOUDINARY_PRESET = 'uz6jp648';
+const ADMIN_EMAIL       = 'johnnjenga9097@gmail.com';
+
+const CATS = {
+  food:       { icon:'🍽️', label:'Food & Restaurant',  color:'#EFF6FF' },
+  mama_mboga: { icon:'🥦', label:'Groceries',           color:'#F0FDF4' },
+  chemist:    { icon:'💊', label:'Chemist',             color:'#FAF5FF' },
+  shop:       { icon:'🛍️', label:'Shop',                color:'#FFFBEB' },
+  hostel:     { icon:'🏠', label:'Hostel',              color:'#EFF6FF' },
+  boda:       { icon:'🏍️', label:'Boda Boda',           color:'#FFF7ED' },
+  salon:      { icon:'✂️', label:'Salon',               color:'#FDF2F8' },
+  other:      { icon:'📌', label:'Other',               color:'#F9FAFB' },
 };
 
-// ══ PAGE UTILS ══
-const showPage = n => { document.querySelectorAll('.page').forEach(p=>p.classList.remove('active')); document.getElementById('page-'+n)?.classList.add('active'); };
-const switchTab = t => { document.querySelectorAll('.auth-tab').forEach(x=>x.classList.remove('active')); document.querySelectorAll('.auth-panel').forEach(x=>x.classList.remove('active')); document.querySelector(`.auth-tab[onclick*="${t}"]`).classList.add('active'); document.getElementById('auth-'+t).classList.add('active'); };
-const pickRole = (el,r) => { document.querySelectorAll('.role-card').forEach(c=>c.classList.remove('selected')); el.classList.add('selected'); document.getElementById('su_role').value=r; };
-const toggleSidebar = () => { document.getElementById('sidebar').classList.toggle('open'); document.getElementById('sbOverlay').classList.toggle('open'); };
-const showPanel = (id,nav) => { document.querySelectorAll('.dash-panel').forEach(p=>p.classList.remove('active')); document.getElementById(id)?.classList.add('active'); if(nav){document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));nav.classList.add('active');} document.getElementById('sidebar').classList.remove('open'); document.getElementById('sbOverlay').classList.remove('open'); };
-const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-const showToast = (icon,title,body) => { document.getElementById('tIcon').textContent=icon; document.getElementById('tTitle').textContent=title; document.getElementById('tBody').textContent=body; const t=document.getElementById('toast'); t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),4500); };
-const showErr = (id,msg) => { const e=document.getElementById(id); e.textContent=msg; e.style.display='block'; };
+// ── UTILS ──────────────────────────────
+const $  = id => document.getElementById(id);
+const esc = s  => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const ge  = (tag,cls,html) => { const el=document.createElement(tag); if(cls)el.className=cls; if(html)el.innerHTML=html; return el; };
 
-// ══ ROUTER ══
-function routeToDashboard(role) {
-  const u = window.currentUser;
-  const r = u.email===ADMIN_EMAIL?'admin':role;
-  u.effectiveRole = r;
-  const n = u.name||u.email?.split('@')[0]||'User';
-  document.getElementById('sbName').textContent = n;
-  document.getElementById('sbAvatar').textContent = n[0].toUpperCase();
-  const rMap = {student:'🎓 Student',business:'🏪 Business Owner',rider:'🏍️ Boda Rider',admin:'⚙️ Admin'};
-  document.getElementById('sbRole').textContent = rMap[r]||r;
-  if(r==='student') buildStudent();
-  else if(r==='business') buildBusiness();
-  else if(r==='rider') buildRider();
-  else if(r==='admin') buildAdmin();
+function showPage(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  const pg = $('page-' + name);
+  if (pg) pg.classList.add('active');
+}
+
+function showPanel(id, navEl) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  const p = $(id); if (p) p.classList.add('active');
+  if (navEl) {
+    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+    navEl.classList.add('active');
+  }
+  $('sidebar')?.classList.remove('open');
+  $('sbOverlay')?.classList.remove('open');
+}
+
+function toast(icon, title, body, isError) {
+  $('t_icon').textContent  = icon;
+  $('t_title').textContent = title;
+  $('t_body').textContent  = body || '';
+  const t = $('toast');
+  t.style.borderLeft = isError ? '3px solid #DC2626' : '3px solid #2563EB';
+  t.classList.add('show');
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => t.classList.remove('show'), 4000);
+}
+
+function setBtn(id, loading, text) {
+  const b = $(id); if (!b) return;
+  b.disabled = loading;
+  if (loading) { b.classList.add('btn-loading'); b.dataset.orig = b.textContent; b.textContent = ''; }
+  else { b.classList.remove('btn-loading'); b.textContent = text || b.dataset.orig || 'Submit'; }
+}
+
+function showErr(id, msg) {
+  const el = $(id); if (!el) return;
+  el.textContent = msg; el.style.display = 'block';
+}
+function clearErr(id) {
+  const el = $(id); if (el) { el.textContent = ''; el.style.display = 'none'; }
+}
+
+function switchTab(tab) {
+  document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.auth-panel').forEach(p => p.classList.remove('active'));
+  document.querySelector(`.auth-tab[onclick*="${tab}"]`).classList.add('active');
+  $('tab-' + tab).classList.add('active');
+}
+
+function pickRole(el, role) {
+  document.querySelectorAll('.role-card').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  $('su_role').value = role;
+}
+
+function toggleSb() {
+  $('sidebar').classList.toggle('open');
+  $('sbOverlay').classList.toggle('open');
+}
+
+// ── ROUTING ────────────────────────────
+function route(role) {
+  const u = window.CU;
+  const r = u.email === ADMIN_EMAIL ? 'admin' : role;
+  u._role = r;
+  const name = u.name || u.email.split('@')[0];
+  $('sbName').textContent   = name;
+  $('sbAvatar').textContent = name[0].toUpperCase();
+  const roleLabels = { student:'Student', business:'Business Owner', rider:'Boda Rider', admin:'Admin' };
+  $('sbRole').textContent   = roleLabels[r] || r;
+  const builders = { student: buildStudent, business: buildBusiness, rider: buildRider, admin: buildAdmin };
+  (builders[r] || buildStudent)();
   showPage('dashboard');
 }
 
-// ══ AUTH ══
+// ── AUTH ────────────────────────────────
 async function doLogin() {
-  const email=document.getElementById('li_email').value.trim(), pw=document.getElementById('li_pw').value;
-  document.getElementById('li_err').style.display='none';
-  if(!email||!pw){showErr('li_err','Enter your email and password.');return;}
-  const btn=document.getElementById('li_btn'); btn.textContent='Logging in…'; btn.disabled=true;
-  try { await window.fbFns.signInWithEmailAndPassword(window.fbAuth,email,pw); }
-  catch(e){ btn.textContent='Log In to ChukaConnect'; btn.disabled=false; showErr('li_err','Wrong email or password. Try again.'); }
-}
-
-async function doSignUp() {
-  const fn=document.getElementById('su_fn').value.trim(), ln=document.getElementById('su_ln').value.trim();
-  const email=document.getElementById('su_email').value.trim(), pw=document.getElementById('su_pw').value;
-  const phone=document.getElementById('su_phone').value.trim(), role=document.getElementById('su_role').value;
-  document.getElementById('su_err').style.display='none';
-  if(!fn||!email||!pw){showErr('su_err','First name, email and password are required.');return;}
-  if(pw.length<6){showErr('su_err','Password must be at least 6 characters.');return;}
-  const btn=document.getElementById('su_btn'); btn.textContent='Creating…'; btn.disabled=true;
+  clearErr('li_err');
+  const email = $('li_email').value.trim();
+  const pw    = $('li_pw').value;
+  if (!email || !pw) { showErr('li_err', 'Please enter your email and password.'); return; }
+  setBtn('li_btn', true);
   try {
-    const cred = await window.fbFns.createUserWithEmailAndPassword(window.fbAuth,email,pw);
-    const data = {uid:cred.user.uid,name:fn+' '+ln,email,phone,role,createdAt:window.fbFns.serverTimestamp()};
-    await window.fbFns.addDoc(window.fbFns.collection(window.fbDb,'users'),data);
-    window.currentUser = data;
-    showToast('🎉','Welcome!',`Hello ${fn}, your account is ready!`);
-  } catch(e){ btn.textContent='Create My Account'; btn.disabled=false; showErr('su_err',e.code==='auth/email-already-in-use'?'Email already registered. Please log in.':e.message); }
+    await window._fb.signInWithEmailAndPassword(window._auth, email, pw);
+    // onAuthStateChanged handles routing
+  } catch(e) {
+    setBtn('li_btn', false, 'Sign in');
+    const msg = e.code === 'auth/wrong-password' || e.code === 'auth/user-not-found' || e.code === 'auth/invalid-credential'
+      ? 'Incorrect email or password.' : e.message;
+    showErr('li_err', msg);
+  }
 }
 
-async function doLogout(){ await window.fbFns.signOut(window.fbAuth); window.currentUser=null; showPage('landing'); showToast('👋','Logged Out','See you next time!'); }
+async function doRegister() {
+  clearErr('su_err');
+  const fn    = $('su_fn').value.trim();
+  const ln    = $('su_ln').value.trim();
+  const email = $('su_email').value.trim();
+  const phone = $('su_phone').value.trim();
+  const pw    = $('su_pw').value;
+  const role  = $('su_role').value;
+  if (!fn || !ln || !email || !pw) { showErr('su_err', 'First name, last name, email and password are required.'); return; }
+  if (pw.length < 6) { showErr('su_err', 'Password must be at least 6 characters.'); return; }
+  setBtn('su_btn', true);
+  try {
+    const { createUserWithEmailAndPassword, collection, addDoc, serverTimestamp } = window._fb;
+    const cred = await createUserWithEmailAndPassword(window._auth, email, pw);
+    const profile = { uid: cred.user.uid, name: fn + ' ' + ln, email, phone, role, createdAt: serverTimestamp() };
+    await addDoc(collection(window._db, 'users'), profile);
+    window.CU = profile;
+    toast('✅', 'Account created', `Welcome, ${fn}!`);
+  } catch(e) {
+    setBtn('su_btn', false, 'Create account');
+    const msg = e.code === 'auth/email-already-in-use'
+      ? 'This email is already registered. Please sign in.'
+      : e.message;
+    showErr('su_err', msg);
+  }
+}
 
-// ══════════════════════════════════════════
-// 🎓 STUDENT DASHBOARD
-// ══════════════════════════════════════════
+async function doLogout() {
+  await window._fb.signOut(window._auth);
+  window.CU = null;
+  showPage('auth');
+  toast('👋', 'Signed out', 'See you next time.');
+}
+
+// ── IMAGE UPLOAD ────────────────────────
+async function cloudUpload(file, barId, labelId, wrapId) {
+  if (file.size > 5 * 1024 * 1024) throw new Error('Image is too large. Maximum size is 5MB.');
+  $(wrapId).style.display = 'block';
+  $(barId).style.width    = '5%';
+  $(labelId).textContent  = 'Uploading photo...';
+  const fd = new FormData();
+  fd.append('file', file);
+  fd.append('upload_preset', CLOUDINARY_PRESET);
+  fd.append('folder', 'chukaconnect');
+  let pct = 5;
+  const timer = setInterval(() => {
+    pct = Math.min(pct + 6, 88);
+    $(barId).style.width = pct + '%';
+  }, 350);
+  try {
+    const res  = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD}/image/upload`, { method:'POST', body:fd });
+    clearInterval(timer);
+    if (!res.ok) { const e = await res.json(); throw new Error(e.error?.message || 'Upload failed.'); }
+    const data = await res.json();
+    $(barId).style.width   = '100%';
+    $(labelId).textContent = 'Photo uploaded.';
+    return data.secure_url;
+  } catch(e) {
+    clearInterval(timer);
+    $(labelId).textContent = 'Upload failed: ' + e.message;
+    throw e;
+  }
+}
+
+function previewImg(inputId, previewId) {
+  const file = $(inputId)?.files[0]; if (!file) return;
+  const r = new FileReader();
+  r.onload = e => { const el = $(previewId); if (el) { el.src = e.target.result; el.style.display = 'block'; } };
+  r.readAsDataURL(file);
+}
+
+// ── SKELETON ────────────────────────────
+function skelGrid(n) {
+  return Array.from({length:n}, () => `<div class="skel skel-card"></div>`).join('');
+}
+
+// ════════════════════════════════════════
+// STUDENT DASHBOARD
+// ════════════════════════════════════════
 function buildStudent() {
-  const u = window.currentUser;
-  document.getElementById('sidebarNav').innerHTML = `
-    <button class="nav-item active" onclick="showPanel('s-home',this)"><span class="nav-icon">🏠</span>Home</button>
-    <div class="sidebar-section">Discover</div>
-    <button class="nav-item" onclick="showPanel('s-browse',this);sLoad('all','s-grid')"><span class="nav-icon">🗂️</span>All Services</button>
-    <button class="nav-item" onclick="showPanel('s-hostels',this);sLoad('hostel','s-hgrid')"><span class="nav-icon">🏠</span>Hostels</button>
-    <button class="nav-item" onclick="showPanel('s-food',this);sLoad('food','s-fgrid')"><span class="nav-icon">🍽️</span>Food & Restaurants</button>
-    <button class="nav-item" onclick="showPanel('s-chemist',this);sLoad('chemist','s-cgrid')"><span class="nav-icon">💊</span>Chemists</button>
-    <button class="nav-item" onclick="showPanel('s-boda',this);sLoad('boda','s-bgrid')"><span class="nav-icon">🏍️</span>Boda Boda</button>
-    <button class="nav-item" onclick="showPanel('s-shops',this);sLoad('shop','s-sgrid')"><span class="nav-icon">🛍️</span>Shops</button>
-    <div class="sidebar-section">Account</div>
-    <button class="nav-item" onclick="showPanel('s-profile',this)"><span class="nav-icon">👤</span>My Profile</button>`;
-  const nm = u.name?.split(' ')[0]||'Student';
-  document.getElementById('dashMain').innerHTML = `
-    <div id="s-home" class="dash-panel active">
-      <div class="dash-header"><h1>👋 Welcome, ${esc(nm)}!</h1><p>Discover everything around Chuka University campus</p></div>
-      <div class="stats-row">
-        <div class="stat-card"><div class="stat-num" id="ss1">—</div><div class="stat-label">Active Listings</div></div>
-        <div class="stat-card green"><div class="stat-num" id="ss2">—</div><div class="stat-label">Hostels Available</div></div>
-        <div class="stat-card blue"><div class="stat-num" id="ss3">—</div><div class="stat-label">Boda Riders</div></div>
-        <div class="stat-card orange"><div class="stat-num" id="ss4">—</div><div class="stat-label">Food Places</div></div>
+  $('sbNav').innerHTML = `
+    <button class="nav-btn active" onclick="showPanel('s-home',this)"><span class="ni">🏠</span>Home</button>
+    <p class="sb-section">Browse</p>
+    <button class="nav-btn" onclick="showPanel('s-all',this);sLoad('all','s-all-grid')"><span class="ni">🗂️</span>All Services</button>
+    <button class="nav-btn" onclick="showPanel('s-hostels',this);sLoad('hostel','s-h-grid')"><span class="ni">🏠</span>Hostels</button>
+    <button class="nav-btn" onclick="showPanel('s-food',this);sLoad('food','s-f-grid')"><span class="ni">🍽️</span>Food</button>
+    <button class="nav-btn" onclick="showPanel('s-chemist',this);sLoad('chemist','s-c-grid')"><span class="ni">💊</span>Chemists</button>
+    <button class="nav-btn" onclick="showPanel('s-boda',this);sLoad('boda','s-b-grid')"><span class="ni">🏍️</span>Boda Boda</button>
+    <button class="nav-btn" onclick="showPanel('s-shops',this);sLoad('shop','s-s-grid')"><span class="ni">🛍️</span>Shops</button>
+    <p class="sb-section">Account</p>
+    <button class="nav-btn" onclick="showPanel('s-profile',this)"><span class="ni">👤</span>Profile</button>`;
+
+  const u = window.CU;
+  $('dashMain').innerHTML = `
+    <div id="s-home" class="panel active">
+      <div class="panel-header"><h1>Good day, ${esc(u.name?.split(' ')[0] || 'Student')}</h1><p>Find services and accommodation around Chuka University.</p></div>
+      <div class="stats-grid">
+        <div class="stat-tile blue"><div class="n" id="ss-all">—</div><div class="l">Active listings</div></div>
+        <div class="stat-tile green"><div class="n" id="ss-host">—</div><div class="l">Hostels available</div></div>
+        <div class="stat-tile amber"><div class="n" id="ss-food">—</div><div class="l">Food places</div></div>
+        <div class="stat-tile"><div class="n" id="ss-boda">—</div><div class="l">Boda riders</div></div>
       </div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:0.85rem;margin-bottom:2rem">
-        ${[['🏠','Hostels','s-hostels',"sLoad('hostel','s-hgrid')"],['🍽️','Food','s-food',"sLoad('food','s-fgrid')"],['💊','Chemist','s-chemist',"sLoad('chemist','s-cgrid')"],['🏍️','Boda','s-boda',"sLoad('boda','s-bgrid')"],['🛍️','Shops','s-shops',"sLoad('shop','s-sgrid')"],['🥦','Groceries','s-browse',"sLoad('mama_mboga','s-grid')"]]
-          .map(([ic,lb,pn,fn])=>`<div class="card" style="text-align:center;cursor:pointer;padding:1.1rem 0.5rem" onclick="showPanel('${pn}',null);${fn}"><div style="font-size:2rem;margin-bottom:0.4rem">${ic}</div><div style="font-size:0.78rem;font-weight:600">${lb}</div></div>`).join('')}
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px;margin-bottom:28px">
+        ${[['🏠','Hostels','s-hostels',"sLoad('hostel','s-h-grid')"],['🍽️','Food','s-food',"sLoad('food','s-f-grid')"],
+           ['💊','Chemist','s-chemist',"sLoad('chemist','s-c-grid')"],['🏍️','Boda','s-boda',"sLoad('boda','s-b-grid')"],
+           ['🛍️','Shops','s-shops',"sLoad('shop','s-s-grid')"],['🥦','Groceries','s-all',"sLoad('mama_mboga','s-all-grid')"]]
+          .map(([ic,lb,pn,fn]) => `
+            <div class="card" style="text-align:center;cursor:pointer;padding:16px 8px;border-radius:10px" onclick="showPanel('${pn}',null);${fn}">
+              <div style="font-size:1.6rem;margin-bottom:6px">${ic}</div>
+              <div style="font-size:0.8rem;font-weight:600;color:var(--gray-700)">${lb}</div>
+            </div>`).join('')}
       </div>
-      <h3 style="font-family:'Syne',sans-serif;margin-bottom:1rem">Latest Near You</h3>
-      <div class="listings-grid" id="s-recent"><div class="loading-block"><div class="spinner"></div></div></div>
+      <h2 class="t-h3" style="margin-bottom:14px;color:var(--gray-800)">Recently added</h2>
+      <div class="listings-grid" id="s-home-grid">${skelGrid(4)}</div>
     </div>
-    <div id="s-browse" class="dash-panel"><div class="dash-header"><h1>🗂️ All Services</h1></div><div class="listings-grid" id="s-grid"><div class="loading-block"><div class="spinner"></div></div></div></div>
-    <div id="s-hostels" class="dash-panel"><div class="dash-header"><h1>🏠 Student Hostels</h1><p>Verified accommodation near campus</p></div><div class="listings-grid" id="s-hgrid"><div class="loading-block"><div class="spinner"></div></div></div></div>
-    <div id="s-food" class="dash-panel"><div class="dash-header"><h1>🍽️ Food & Restaurants</h1></div><div class="listings-grid" id="s-fgrid"><div class="loading-block"><div class="spinner"></div></div></div></div>
-    <div id="s-chemist" class="dash-panel"><div class="dash-header"><h1>💊 Chemists & Pharmacies</h1></div><div class="listings-grid" id="s-cgrid"><div class="loading-block"><div class="spinner"></div></div></div></div>
-    <div id="s-boda" class="dash-panel"><div class="dash-header"><h1>🏍️ Boda Boda Riders</h1><p>Request a ride or delivery</p></div><div class="listings-grid" id="s-bgrid"><div class="loading-block"><div class="spinner"></div></div></div></div>
-    <div id="s-shops" class="dash-panel"><div class="dash-header"><h1>🛍️ Shops & Retail</h1></div><div class="listings-grid" id="s-sgrid"><div class="loading-block"><div class="spinner"></div></div></div></div>
-    <div id="s-profile" class="dash-panel">
-      <div class="dash-header"><h1>👤 My Profile</h1></div>
-      <div class="card" style="max-width:440px">
-        <div style="display:flex;align-items:center;gap:1rem;margin-bottom:1.5rem">
-          <div class="user-avatar" style="width:52px;height:52px;font-size:1.2rem">${esc((u.name||'S')[0].toUpperCase())}</div>
-          <div><div style="font-family:'Syne',sans-serif;font-size:1.05rem;font-weight:700">${esc(u.name||'')}</div><div style="font-size:0.8rem;color:var(--text-muted)">🎓 Student · ${esc(u.email||'')}</div></div>
+
+    ${['all','hostels','food','chemist','boda','shops'].map((k,i) => {
+      const labels = {all:'All Services',hostels:'Student Hostels',food:'Food & Restaurants',chemist:'Chemists & Pharmacies',boda:'Boda Boda Riders',shops:'Shops & Retail'};
+      const cats   = {all:'all',hostels:'hostel',food:'food',chemist:'chemist',boda:'boda',shops:'shop'};
+      const ids    = {all:'s-all-grid',hostels:'s-h-grid',food:'s-f-grid',chemist:'s-c-grid',boda:'s-b-grid',shops:'s-s-grid'};
+      return `<div id="s-${k}" class="panel">
+        <div class="panel-header"><h1>${labels[k]}</h1></div>
+        <div class="listings-grid" id="${ids[k]}">${skelGrid(4)}</div>
+      </div>`;
+    }).join('')}
+
+    <div id="s-profile" class="panel">
+      <div class="panel-header"><h1>My Profile</h1></div>
+      <div class="card" style="max-width:420px">
+        <div style="display:flex;align-items:center;gap:14px;margin-bottom:20px;padding-bottom:20px;border-bottom:1px solid var(--gray-100)">
+          <div style="width:48px;height:48px;border-radius:50%;background:var(--blue);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1.1rem;flex-shrink:0">${esc((u.name||'S')[0].toUpperCase())}</div>
+          <div>
+            <div style="font-weight:700;font-size:1rem;color:var(--gray-900)">${esc(u.name||'')}</div>
+            <div style="font-size:0.8rem;color:var(--gray-500)">${esc(u.email||'')}</div>
+          </div>
         </div>
-        <div class="form-group"><label class="form-label">Phone</label><div class="form-input" style="cursor:default">${esc(u.phone||'Not set')}</div></div>
-        <button class="btn btn-red btn-sm" onclick="doLogout()" style="margin-top:0.5rem">🚪 Log Out</button>
+        <div class="field"><label class="field-label">Role</label><input class="field-input" value="Student" disabled></div>
+        <div class="field"><label class="field-label">Phone</label><input class="field-input" value="${esc(u.phone||'Not set')}" disabled></div>
+        <button class="btn btn-danger btn-sm" onclick="doLogout()" style="margin-top:8px">Sign out</button>
       </div>
     </div>`;
+
   loadStudentStats();
-  sLoad('all','s-recent');
+  sLoad('all', 's-home-grid');
 }
 
-async function loadStudentStats(){
-  try{
-    const {collection,getDocs,query,where}=window.fbFns, db=window.fbDb;
-    const [a,h,b,f]=await Promise.all([
-      getDocs(query(collection(db,'listings'),where('status','==','approved'))),
-      getDocs(query(collection(db,'listings'),where('status','==','approved'),where('category','==','hostel'))),
-      getDocs(query(collection(db,'listings'),where('status','==','approved'),where('category','==','boda'))),
-      getDocs(query(collection(db,'listings'),where('status','==','approved'),where('category','==','food'))),
+async function loadStudentStats() {
+  try {
+    const { collection, getDocs, query, where } = window._fb;
+    const db = window._db;
+    const [a,h,f,b] = await Promise.all([
+      getDocs(query(collection(db,'listings'), where('status','==','approved'))),
+      getDocs(query(collection(db,'listings'), where('status','==','approved'), where('category','==','hostel'))),
+      getDocs(query(collection(db,'listings'), where('status','==','approved'), where('category','==','food'))),
+      getDocs(query(collection(db,'listings'), where('status','==','approved'), where('category','==','boda'))),
     ]);
-    document.getElementById('ss1').textContent=a.size;
-    document.getElementById('ss2').textContent=h.size;
-    document.getElementById('ss3').textContent=b.size;
-    document.getElementById('ss4').textContent=f.size;
-  }catch(e){}
+    if($('ss-all'))  $('ss-all').textContent  = a.size;
+    if($('ss-host')) $('ss-host').textContent = h.size;
+    if($('ss-food')) $('ss-food').textContent = f.size;
+    if($('ss-boda')) $('ss-boda').textContent = b.size;
+  } catch(e) {}
 }
 
-async function sLoad(cat,gridId){
-  const grid=document.getElementById(gridId); if(!grid)return;
-  grid.innerHTML=`<div class="loading-block"><div class="spinner"></div></div>`;
-  try{
-    const {collection,getDocs,query,where,orderBy}=window.fbFns, db=window.fbDb;
+async function sLoad(cat, gridId) {
+  const grid = $(gridId); if (!grid) return;
+  grid.innerHTML = skelGrid(4);
+  try {
+    const { collection, getDocs, query, where, orderBy } = window._fb;
+    const db = window._db;
     let q;
-    if(cat==='all') q=query(collection(db,'listings'),where('status','==','approved'),where('category','!=','hostel'),orderBy('category'),orderBy('createdAt','desc'));
-    else q=query(collection(db,'listings'),where('status','==','approved'),where('category','==',cat),orderBy('createdAt','desc'));
-    const snap=await getDocs(q);
-    const items=snap.docs.map(d=>({id:d.id,...d.data()}));
-    if(!items.length){grid.innerHTML=`<div class="empty"><div class="ei">${CAT[cat]?.e||'📭'}</div><p>No listings here yet.</p></div>`;return;}
-    grid.innerHTML=items.map(l=>studentCard(l)).join('');
-  }catch(e){grid.innerHTML=`<div class="empty"><p>Error: ${esc(e.message)}</p></div>`;}
+    if (cat === 'all') {
+      q = query(collection(db,'listings'), where('status','==','approved'), where('category','!=','hostel'), orderBy('category'), orderBy('createdAt','desc'));
+    } else {
+      q = query(collection(db,'listings'), where('status','==','approved'), where('category','==',cat), orderBy('createdAt','desc'));
+    }
+    const snap  = await getDocs(q);
+    const items = snap.docs.map(d => ({ id:d.id, ...d.data() }));
+    if (!items.length) {
+      grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="icon">${CATS[cat]?.icon||'📭'}</div><p>No listings in this category yet.</p></div>`;
+      return;
+    }
+    grid.innerHTML = items.map(l => studentCard(l)).join('');
+  } catch(e) {
+    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><p>Could not load listings. ${esc(e.message)}</p></div>`;
+  }
 }
 
-function studentCard(l){
-  const m=CAT[l.category]||CAT.other;
-  const img=l.imageUrl?`<img src="${esc(l.imageUrl)}" alt="${esc(l.name)}" style="width:100%;height:100%;object-fit:cover">`:`<span class="emoji-big">${m.e}</span>`;
-  const tags=(l.amenities||[]).slice(0,3).map(a=>`<span style="background:var(--dark3);border:1px solid var(--border);padding:0.1rem 0.45rem;border-radius:5px;font-size:0.63rem;color:var(--text-muted)">${esc(a)}</span>`).join('');
-  return `<div class="listing-card">
-    <div class="lcard-img" style="background:${m.c}">${img}<span class="pill pill-open">${m.l}</span></div>
+function studentCard(l) {
+  const c = CATS[l.category] || CATS.other;
+  const img = l.imageUrl
+    ? `<img src="${esc(l.imageUrl)}" alt="${esc(l.name)}" style="width:100%;height:100%;object-fit:cover">`
+    : `<span class="cat-icon">${c.icon}</span>`;
+  const tags = (l.amenities||[]).slice(0,3).map(a => `<span class="lcard-tag">${esc(a)}</span>`).join('');
+  return `<div class="lcard">
+    <div class="lcard-img" style="background:${c.color}">${img}
+      <div class="lcard-badge"><span class="badge badge-blue">${c.label}</span></div>
+    </div>
     <div class="lcard-body">
-      <h4>${esc(l.name)}</h4>
-      <p class="lcard-sub">📍 ${esc(l.location||'Nearby')}</p>
-      ${l.description?`<p class="lcard-sub">${esc(l.description).substring(0,75)}${l.description.length>75?'…':''}</p>`:''}
-      ${tags?`<div style="display:flex;gap:0.3rem;flex-wrap:wrap;margin-bottom:0.5rem">${tags}</div>`:''}
-      ${l.price?`<div style="font-family:'Syne',sans-serif;font-weight:700;color:var(--primary);font-size:0.9rem">KSh ${esc(String(l.price))}<span style="font-size:0.68rem;font-weight:400;color:var(--text-muted)">/mo</span></div>`:''}
-      ${l.delivery?`<div style="font-size:0.7rem;color:var(--accent);margin-top:0.25rem">🛵 Delivery Available</div>`:''}
-      ${l.phone?`<button class="btn btn-primary btn-sm" style="width:100%;margin-top:0.75rem;justify-content:center" onclick="window.location='tel:${esc(l.phone)}'">📞 ${esc(l.phone)}</button>`:''}
+      <div class="lcard-name">${esc(l.name)}</div>
+      <div class="lcard-meta">📍 ${esc(l.location||'Nearby')}</div>
+      ${l.description ? `<div class="lcard-meta" style="margin-bottom:8px">${esc(l.description).substring(0,70)}${l.description.length>70?'…':''}</div>` : ''}
+      ${tags ? `<div class="lcard-tags">${tags}</div>` : ''}
+      ${l.price ? `<div class="lcard-price">KSh ${esc(String(l.price))}<span style="font-size:0.72rem;font-weight:400;color:var(--gray-400)">/mo</span></div>` : ''}
+      ${l.delivery ? `<div style="font-size:0.75rem;color:var(--green);margin-top:4px;font-weight:500">Delivery available</div>` : ''}
+      ${l.phone ? `<div class="lcard-actions"><a href="tel:${esc(l.phone)}" class="btn btn-primary btn-sm" style="width:100%;justify-content:center">Call ${esc(l.phone)}</a></div>` : ''}
     </div>
   </div>`;
 }
 
-// ══════════════════════════════════════════
-// 🏪 BUSINESS DASHBOARD
-// ══════════════════════════════════════════
-function buildBusiness(){
-  const u=window.currentUser;
-  document.getElementById('sidebarNav').innerHTML=`
-    <button class="nav-item active" onclick="showPanel('b-home',this)"><span class="nav-icon">📊</span>Dashboard</button>
-    <div class="sidebar-section">My Business</div>
-    <button class="nav-item" onclick="showPanel('b-listings',this);loadMyListings()"><span class="nav-icon">📋</span>My Listings</button>
-    <button class="nav-item" onclick="showPanel('b-add',this)"><span class="nav-icon">➕</span>Add New Listing</button>
-    <div class="sidebar-section">Account</div>
-    <button class="nav-item" onclick="showPanel('b-profile',this)"><span class="nav-icon">👤</span>Profile</button>`;
-  document.getElementById('dashMain').innerHTML=`
-    <div id="b-home" class="dash-panel active">
-      <div class="dash-header"><h1>📊 Business Dashboard</h1><p>Welcome, ${esc(u.name?.split(' ')[0]||'')}! Manage your listings here.</p></div>
-      <div class="stats-row">
-        <div class="stat-card"><div class="stat-num" id="bs1">—</div><div class="stat-label">Total Listings</div></div>
-        <div class="stat-card green"><div class="stat-num" id="bs2">—</div><div class="stat-label">Live & Approved</div></div>
-        <div class="stat-card orange"><div class="stat-num" id="bs3">—</div><div class="stat-label">Pending Review</div></div>
+// ════════════════════════════════════════
+// BUSINESS DASHBOARD
+// ════════════════════════════════════════
+function buildBusiness() {
+  $('sbNav').innerHTML = `
+    <button class="nav-btn active" onclick="showPanel('b-home',this)"><span class="ni">📊</span>Overview</button>
+    <p class="sb-section">Listings</p>
+    <button class="nav-btn" onclick="showPanel('b-mine',this);loadMyListings()"><span class="ni">📋</span>My listings</button>
+    <button class="nav-btn" onclick="showPanel('b-add',this)"><span class="ni">＋</span>Add listing</button>
+    <p class="sb-section">Account</p>
+    <button class="nav-btn" onclick="showPanel('b-profile',this)"><span class="ni">👤</span>Profile</button>`;
+
+  const u = window.CU;
+  $('dashMain').innerHTML = `
+    <div id="b-home" class="panel active">
+      <div class="panel-header"><h1>Business Overview</h1><p>Track your listings and their approval status.</p></div>
+      <div class="stats-grid">
+        <div class="stat-tile"><div class="n" id="bs-all">—</div><div class="l">Total listings</div></div>
+        <div class="stat-tile green"><div class="n" id="bs-live">—</div><div class="l">Live and approved</div></div>
+        <div class="stat-tile amber"><div class="n" id="bs-pend">—</div><div class="l">Pending review</div></div>
       </div>
-      <div style="display:flex;gap:1rem;flex-wrap:wrap;margin-bottom:2rem">
-        <button class="btn btn-primary" onclick="showPanel('b-add',null)">➕ Add New Listing</button>
-        <button class="btn btn-outline" onclick="showPanel('b-listings',null);loadMyListings()">📋 View My Listings</button>
+      <div class="alert alert-info">
+        <strong>How approval works:</strong> Submit your listing, then wait for admin review. Once approved it goes live and students can see it. Rejected listings are not visible.
       </div>
-      <div class="card" style="border-left:4px solid var(--orange)">
-        <div style="font-family:'Syne',sans-serif;font-weight:700;margin-bottom:0.5rem">📋 How It Works</div>
-        <p style="font-size:0.85rem;color:var(--text-muted);line-height:1.8">
-          1️⃣ Add your listing with photo and details<br>
-          2️⃣ Admin reviews and approves it (usually within a few hours)<br>
-          3️⃣ Once approved, students can see and contact you<br>
-          4️⃣ You can manage all your listings from here
-        </p>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <button class="btn btn-primary" onclick="showPanel('b-add',null)">Add new listing</button>
+        <button class="btn btn-secondary" onclick="showPanel('b-mine',null);loadMyListings()">View my listings</button>
       </div>
     </div>
-    <div id="b-listings" class="dash-panel">
-      <div class="dash-header"><h1>📋 My Listings</h1><p>All your submitted listings and their approval status</p></div>
-      <div class="listings-grid" id="b-lgrid"><div class="loading-block"><div class="spinner"></div></div></div>
+
+    <div id="b-mine" class="panel">
+      <div class="panel-header"><h1>My Listings</h1><p>All submitted listings and their status.</p></div>
+      <div class="listings-grid" id="b-lgrid">${skelGrid(3)}</div>
     </div>
-    <div id="b-add" class="dash-panel">
-      <div class="dash-header"><h1>➕ Add New Listing</h1><p>Fill in your business details. Admin will review before it goes live.</p></div>
-      <div style="max-width:580px">
+
+    <div id="b-add" class="panel">
+      <div class="panel-header"><h1>Add a listing</h1><p>Fill in the details. Your listing will go live after admin approval.</p></div>
+      <div style="max-width:560px">
         <div class="card">
-          <div class="form-group"><label class="form-label">Business / Service Name *</label><input class="form-input" id="al_name" placeholder="e.g. Mama Achieng's Kitchen"></div>
-          <div class="form-group"><label class="form-label">Category *</label>
-            <select class="form-select" id="al_cat" onchange="toggleHostelFields()">
-              <option value="food">🍽️ Restaurant / Food</option>
-              <option value="mama_mboga">🥦 Mama Mboga / Groceries</option>
-              <option value="chemist">💊 Chemist / Pharmacy</option>
-              <option value="shop">🛍️ Shop / Retail</option>
-              <option value="salon">✂️ Salon / Barbershop</option>
-              <option value="hostel">🏠 Hostel / Accommodation</option>
-              <option value="boda">🏍️ Boda Boda</option>
-              <option value="other">📌 Other</option>
+          <div class="field"><label class="field-label">Business name *</label><input class="field-input" id="al_name" placeholder="e.g. Mama Achieng Kitchen"></div>
+          <div class="field"><label class="field-label">Category *</label>
+            <select class="field-input" id="al_cat" onchange="toggleHostelExtras()">
+              <option value="food">Food / Restaurant</option>
+              <option value="mama_mboga">Mama Mboga / Groceries</option>
+              <option value="chemist">Chemist / Pharmacy</option>
+              <option value="shop">Shop / Retail</option>
+              <option value="salon">Salon / Barbershop</option>
+              <option value="hostel">Hostel / Accommodation</option>
+              <option value="boda">Boda Boda</option>
+              <option value="other">Other</option>
             </select>
           </div>
-          <div class="form-group"><label class="form-label">Description</label><textarea class="form-textarea" id="al_desc" placeholder="What do you offer? Opening hours, specialties…"></textarea></div>
-          <div class="form-group"><label class="form-label">Location / Address *</label><input class="form-input" id="al_loc" placeholder="e.g. 200m from Chuka University gate"></div>
-          <div class="form-row">
-            <div class="form-group"><label class="form-label">Phone Number *</label><input class="form-input" id="al_phone" type="tel" placeholder="0712 345 678"></div>
-            <div class="form-group"><label class="form-label">Price / Rate (KSh)</label><input class="form-input" id="al_price" type="number" placeholder="e.g. 3500"></div>
+          <div class="field"><label class="field-label">Description</label><textarea class="field-input" id="al_desc" placeholder="Opening hours, specialties, anything useful for students..."></textarea></div>
+          <div class="field"><label class="field-label">Location / Address *</label><input class="field-input" id="al_loc" placeholder="e.g. 200m from Chuka University main gate"></div>
+          <div class="field-row">
+            <div class="field"><label class="field-label">Phone number *</label><input class="field-input" id="al_phone" type="tel" placeholder="0712 345 678"></div>
+            <div class="field"><label class="field-label">Price (KSh)</label><input class="field-input" id="al_price" type="number" placeholder="e.g. 3500"></div>
           </div>
-          <div class="form-group"><label class="form-label">M-Pesa Till / Paybill (optional)</label><input class="form-input" id="al_till" placeholder="e.g. 174379"></div>
-          <div id="hostelFields" style="display:none">
-            <div class="form-group"><label class="form-label">Room Type</label>
-              <select class="form-select" id="al_room"><option>Single Room</option><option>Bedsitter</option><option>Self-Contain</option><option>Shared Room</option></select>
+          <div class="field"><label class="field-label">M-Pesa Till / Paybill</label><input class="field-input" id="al_till" placeholder="e.g. 174379 (optional)"></div>
+
+          <div id="hostelExtras" style="display:none">
+            <div class="field"><label class="field-label">Room type</label>
+              <select class="field-input" id="al_room"><option>Single Room</option><option>Bedsitter</option><option>Self-Contain</option><option>Shared Room</option></select>
             </div>
-            <div class="form-group"><label class="form-label">Amenities</label>
+            <div class="field"><label class="field-label">Amenities</label>
               <div class="amenities-wrap">
-                ${['WiFi','Water','Security','CCTV','Kitchen','Parking','Cleaning','Study Room','Generator'].map(a=>`<label class="amenity-label"><input type="checkbox" class="alamen" value="${a}"> ${a}</label>`).join('')}
+                ${['WiFi','Water','Security','CCTV','Kitchen','Parking','Cleaning','Study Room','Generator']
+                  .map(a => `<label class="amen-label"><input type="checkbox" class="al-amen" value="${a}"> ${a}</label>`).join('')}
               </div>
             </div>
           </div>
-          <div class="form-group">
-            <label class="form-label">Business Photo</label>
-            <div class="upload-area">
-              <input type="file" id="al_img" accept="image/*" onchange="prevImg('al_img','al_prev')">
-              <div style="font-size:2rem;margin-bottom:0.4rem">📷</div>
-              <p>Click or drag to upload a photo</p>
-              <p style="font-size:0.72rem;color:var(--text-dim)">JPG, PNG — max 5MB</p>
-              <img id="al_prev" class="img-preview" alt="preview">
+
+          <div class="field">
+            <label class="field-label">Business photo</label>
+            <div class="upload-zone">
+              <input type="file" id="al_img" accept="image/*" onchange="previewImg('al_img','al_prev')">
+              <div class="uz-icon">📷</div>
+              <p>Click or drag to upload</p>
+              <p class="uz-hint">JPG, PNG — max 5MB</p>
+              <img id="al_prev" class="preview-img" alt="">
             </div>
-            <div class="progress-wrap" id="al_pw"><div class="progress-track"><div class="progress-fill" id="al_pb"></div></div><div class="progress-label" id="al_pl">Uploading…</div></div>
+            <div class="upload-progress" id="al_wrap">
+              <div class="prog-track"><div class="prog-fill" id="al_bar"></div></div>
+              <div class="prog-label" id="al_lbl"></div>
+            </div>
           </div>
-          <div class="form-group">
-            <label style="display:flex;align-items:center;gap:0.6rem;cursor:pointer;font-size:0.85rem">
-              <input type="checkbox" id="al_del" style="accent-color:var(--primary);width:16px;height:16px">
-              We offer delivery (boda riders can pick up from us)
+
+          <div class="field">
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:0.875rem;color:var(--gray-700)">
+              <input type="checkbox" id="al_delivery" style="accent-color:var(--blue);width:15px;height:15px">
+              We offer delivery (boda riders can collect orders from us)
             </label>
           </div>
-          <button class="submit-btn" id="al_btn" onclick="doAddListing()">🚀 Submit for Approval</button>
-          <p style="font-size:0.72rem;color:var(--text-muted);text-align:center;margin-top:0.5rem">Listing will be reviewed by admin before appearing to students</p>
+
+          <button class="btn btn-primary btn-full" id="al_btn" onclick="doAddListing()">Submit for review</button>
+          <p style="font-size:0.75rem;color:var(--gray-400);text-align:center;margin-top:8px">Admin reviews listings before they go live to students.</p>
         </div>
       </div>
     </div>
-    <div id="b-profile" class="dash-panel">
-      <div class="dash-header"><h1>👤 Profile</h1></div>
-      <div class="card" style="max-width:440px">
-        <div style="display:flex;align-items:center;gap:1rem;margin-bottom:1.5rem">
-          <div class="user-avatar" style="width:52px;height:52px;font-size:1.2rem">${esc((u.name||'B')[0].toUpperCase())}</div>
-          <div><div style="font-family:'Syne',sans-serif;font-size:1.05rem;font-weight:700">${esc(u.name||'')}</div><div style="font-size:0.8rem;color:var(--text-muted)">🏪 Business Owner · ${esc(u.email||'')}</div></div>
+
+    <div id="b-profile" class="panel">
+      <div class="panel-header"><h1>Profile</h1></div>
+      <div class="card" style="max-width:420px">
+        <div style="display:flex;align-items:center;gap:14px;margin-bottom:20px;padding-bottom:20px;border-bottom:1px solid var(--gray-100)">
+          <div style="width:48px;height:48px;border-radius:50%;background:var(--blue);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1.1rem">${esc((u.name||'B')[0].toUpperCase())}</div>
+          <div><div style="font-weight:700;color:var(--gray-900)">${esc(u.name||'')}</div><div style="font-size:0.8rem;color:var(--gray-500)">Business Owner · ${esc(u.email||'')}</div></div>
         </div>
-        <div class="form-group"><label class="form-label">Phone</label><div class="form-input" style="cursor:default">${esc(u.phone||'Not set')}</div></div>
-        <button class="btn btn-red btn-sm" onclick="doLogout()">🚪 Log Out</button>
+        <div class="field"><label class="field-label">Phone</label><input class="field-input" value="${esc(u.phone||'Not set')}" disabled></div>
+        <button class="btn btn-danger btn-sm" onclick="doLogout()">Sign out</button>
       </div>
     </div>`;
+
   loadBizStats();
 }
 
-function toggleHostelFields(){ document.getElementById('hostelFields').style.display = document.getElementById('al_cat').value==='hostel'?'block':'none'; }
-
-async function loadBizStats(){
-  try{
-    const {collection,getDocs,query,where}=window.fbFns, db=window.fbDb, uid=window.currentUser.uid;
-    const all=await getDocs(query(collection(db,'listings'),where('ownerUid','==',uid)));
-    const app=all.docs.filter(d=>d.data().status==='approved').length;
-    const pnd=all.docs.filter(d=>d.data().status==='pending').length;
-    document.getElementById('bs1').textContent=all.size;
-    document.getElementById('bs2').textContent=app;
-    document.getElementById('bs3').textContent=pnd;
-  }catch(e){}
+function toggleHostelExtras() {
+  $('hostelExtras').style.display = $('al_cat').value === 'hostel' ? 'block' : 'none';
 }
 
-async function loadMyListings(){
-  const grid=document.getElementById('b-lgrid');
-  grid.innerHTML=`<div class="loading-block"><div class="spinner"></div></div>`;
-  try{
-    const {collection,getDocs,query,where,orderBy}=window.fbFns, db=window.fbDb;
-    const q=query(collection(db,'listings'),where('ownerUid','==',window.currentUser.uid),orderBy('createdAt','desc'));
-    const snap=await getDocs(q);
-    const items=snap.docs.map(d=>({id:d.id,...d.data()}));
-    if(!items.length){grid.innerHTML=`<div class="empty"><div class="ei">📭</div><p>No listings yet.</p><button class="btn btn-primary" onclick="showPanel('b-add',null)">➕ Add Your First Listing</button></div>`;return;}
-    grid.innerHTML=items.map(l=>{
-      const m=CAT[l.category]||CAT.other;
-      const img=l.imageUrl?`<img src="${esc(l.imageUrl)}" style="width:100%;height:100%;object-fit:cover">`:`<span class="emoji-big">${m.e}</span>`;
-      const sc=l.status==='approved'?'pill-approved':l.status==='rejected'?'pill-rejected':'pill-pending';
-      const sl=l.status==='approved'?'✅ Live':l.status==='rejected'?'❌ Rejected':'⏳ Pending';
-      return `<div class="listing-card">
-        <div class="lcard-img" style="background:${m.c}">${img}<span class="pill ${sc}">${sl}</span></div>
+async function loadBizStats() {
+  try {
+    const { collection, getDocs, query, where } = window._fb;
+    const uid = window.CU.uid;
+    const all = await getDocs(query(collection(window._db,'listings'), where('ownerUid','==',uid)));
+    const live = all.docs.filter(d => d.data().status === 'approved').length;
+    const pend = all.docs.filter(d => d.data().status === 'pending').length;
+    if($('bs-all'))  $('bs-all').textContent  = all.size;
+    if($('bs-live')) $('bs-live').textContent = live;
+    if($('bs-pend')) $('bs-pend').textContent = pend;
+  } catch(e) {}
+}
+
+async function loadMyListings() {
+  const grid = $('b-lgrid'); if (!grid) return;
+  grid.innerHTML = skelGrid(3);
+  try {
+    const { collection, getDocs, query, where, orderBy } = window._fb;
+    const q = query(collection(window._db,'listings'), where('ownerUid','==',window.CU.uid), orderBy('createdAt','desc'));
+    const snap  = await getDocs(q);
+    const items = snap.docs.map(d => ({ id:d.id, ...d.data() }));
+    if (!items.length) {
+      grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="icon">📭</div><p>No listings yet.</p><button class="btn btn-primary" onclick="showPanel('b-add',null)">Add your first listing</button></div>`;
+      return;
+    }
+    grid.innerHTML = items.map(l => {
+      const c  = CATS[l.category] || CATS.other;
+      const img = l.imageUrl ? `<img src="${esc(l.imageUrl)}" style="width:100%;height:100%;object-fit:cover">` : `<span class="cat-icon">${c.icon}</span>`;
+      const statusBadge = l.status === 'approved'
+        ? `<span class="badge badge-green">Live</span>`
+        : l.status === 'rejected'
+        ? `<span class="badge badge-red">Rejected</span>`
+        : `<span class="badge badge-amber">Pending review</span>`;
+      return `<div class="lcard">
+        <div class="lcard-img" style="background:${c.color}">${img}
+          <div class="lcard-badge">${statusBadge}</div>
+        </div>
         <div class="lcard-body">
-          <h4>${esc(l.name)}</h4>
-          <p class="lcard-sub">${m.l} · 📍 ${esc(l.location||'')}</p>
-          ${l.status==='pending'?`<p style="font-size:0.78rem;color:var(--orange);margin:0.4rem 0">⏳ Waiting for admin review</p>`:''}
-          ${l.status==='approved'?`<p style="font-size:0.78rem;color:var(--green);margin:0.4rem 0">✅ Visible to all students</p>`:''}
-          ${l.status==='rejected'?`<p style="font-size:0.78rem;color:var(--red);margin:0.4rem 0">❌ Not approved. Contact admin.</p>`:''}
-          <div class="lcard-actions"><button class="btn btn-red btn-sm" onclick="delListing('${l.id}')">🗑️ Delete</button></div>
+          <div class="lcard-name">${esc(l.name)}</div>
+          <div class="lcard-meta">${c.label} · ${esc(l.location||'')}</div>
+          ${l.status==='pending'?`<div style="font-size:0.78rem;color:var(--amber);margin:4px 0">Waiting for admin review.</div>`:''}
+          ${l.status==='approved'?`<div style="font-size:0.78rem;color:var(--green);margin:4px 0">Visible to all students.</div>`:''}
+          ${l.status==='rejected'?`<div style="font-size:0.78rem;color:var(--red);margin:4px 0">Not approved. Contact admin.</div>`:''}
+          <div class="lcard-actions"><button class="btn btn-danger btn-sm" onclick="delListing('${l.id}')">Delete</button></div>
         </div>
       </div>`;
     }).join('');
-  }catch(e){grid.innerHTML=`<div class="empty"><p>Error: ${esc(e.message)}</p></div>`;}
+  } catch(e) {
+    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><p>${esc(e.message)}</p></div>`;
+  }
 }
 
-async function doAddListing(){
-  const name=document.getElementById('al_name').value.trim(), cat=document.getElementById('al_cat').value;
-  const loc=document.getElementById('al_loc').value.trim(), phone=document.getElementById('al_phone').value.trim();
-  if(!name||!loc||!phone){showToast('⚠️','Missing Fields','Name, location and phone are required.');return;}
-  const btn=document.getElementById('al_btn'); btn.textContent='⏳ Submitting…'; btn.disabled=true;
-  try{
-    let imageUrl='';
-    const f=document.getElementById('al_img').files[0];
-    if(f) imageUrl=await cloudUpload(f,'al_pb','al_pl','al_pw');
-    const amenities=[...document.querySelectorAll('.alamen:checked')].map(c=>c.value);
-    const {collection,addDoc,serverTimestamp}=window.fbFns;
-    await addDoc(window.fbFns.collection(window.fbDb,'listings'),{
-      name,category:cat,description:document.getElementById('al_desc').value.trim(),
-      location:loc,phone,price:document.getElementById('al_price').value||'',
-      till:document.getElementById('al_till').value.trim(),
-      roomType:document.getElementById('al_room')?.value||'',amenities,
-      delivery:document.getElementById('al_del').checked,imageUrl,
-      status:'pending',ownerUid:window.currentUser.uid,ownerName:window.currentUser.name,
-      createdAt:serverTimestamp()
+async function doAddListing() {
+  const name  = $('al_name').value.trim();
+  const cat   = $('al_cat').value;
+  const loc   = $('al_loc').value.trim();
+  const phone = $('al_phone').value.trim();
+  if (!name || !loc || !phone) { toast('⚠️','Missing fields','Name, location and phone are required.', true); return; }
+  setBtn('al_btn', true);
+  try {
+    let imageUrl = '';
+    const file = $('al_img').files[0];
+    if (file) imageUrl = await cloudUpload(file, 'al_bar', 'al_lbl', 'al_wrap');
+    const amenities = [...document.querySelectorAll('.al-amen:checked')].map(c => c.value);
+    const { collection, addDoc, serverTimestamp } = window._fb;
+    await addDoc(collection(window._db,'listings'), {
+      name, category:cat,
+      description: $('al_desc').value.trim(),
+      location:loc, phone,
+      price:   $('al_price').value || '',
+      till:    $('al_till').value.trim(),
+      roomType:$('al_room')?.value || '',
+      amenities,
+      delivery: $('al_delivery').checked,
+      imageUrl, status:'pending',
+      ownerUid:  window.CU.uid,
+      ownerName: window.CU.name,
+      createdAt: serverTimestamp()
     });
-    ['al_name','al_desc','al_loc','al_phone','al_price','al_till'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
-    document.getElementById('al_prev').style.display='none';
-    btn.textContent='🚀 Submit for Approval'; btn.disabled=false;
-    showToast('🎉','Submitted!','Admin will review your listing shortly.');
+    ['al_name','al_desc','al_loc','al_phone','al_price','al_till'].forEach(id => { const el=$(id); if(el)el.value=''; });
+    $('al_prev').style.display = 'none';
+    setBtn('al_btn', false, 'Submit for review');
+    toast('✅','Listing submitted','Admin will review it shortly.');
     loadBizStats();
-  }catch(e){btn.textContent='🚀 Submit for Approval';btn.disabled=false;showToast('❌','Error',e.message);}
+  } catch(e) {
+    setBtn('al_btn', false, 'Submit for review');
+    toast('❌','Submission failed', e.message, true);
+  }
 }
 
-async function delListing(id){
-  if(!confirm('Delete this listing permanently?'))return;
-  try{await window.fbFns.deleteDoc(window.fbFns.doc(window.fbDb,'listings',id));showToast('🗑️','Deleted','Listing removed.');loadMyListings();loadBizStats();}
-  catch(e){showToast('❌','Error',e.message);}
+async function delListing(id) {
+  if (!confirm('Delete this listing? This cannot be undone.')) return;
+  try {
+    const { doc, deleteDoc } = window._fb;
+    await deleteDoc(doc(window._db,'listings',id));
+    toast('✅','Deleted','Listing removed.');
+    loadMyListings(); loadBizStats();
+  } catch(e) { toast('❌','Error',e.message,true); }
 }
 
-// ══════════════════════════════════════════
-// 🏍️ RIDER DASHBOARD
-// ══════════════════════════════════════════
-function buildRider(){
-  const u=window.currentUser;
-  document.getElementById('sidebarNav').innerHTML=`
-    <button class="nav-item active" onclick="showPanel('r-home',this)"><span class="nav-icon">🏠</span>Dashboard</button>
-    <div class="sidebar-section">My Work</div>
-    <button class="nav-item" onclick="showPanel('r-profile',this)"><span class="nav-icon">🏍️</span>My Rider Profile</button>
-    <button class="nav-item" onclick="showPanel('r-biz',this);loadRiderBiz()"><span class="nav-icon">🏪</span>Delivery Businesses</button>
-    <div class="sidebar-section">Account</div>
-    <button class="nav-item" onclick="showPanel('r-acct',this)"><span class="nav-icon">👤</span>Account</button>`;
-  document.getElementById('dashMain').innerHTML=`
-    <div id="r-home" class="dash-panel active">
-      <div class="dash-header"><h1>🏍️ Rider Dashboard</h1><p>Welcome, ${esc(u.name?.split(' ')[0]||'')}!</p></div>
-      <div class="card" style="border-left:4px solid var(--primary);margin-bottom:1.5rem">
-        <div style="font-family:'Syne',sans-serif;font-weight:700;margin-bottom:0.5rem">How ChukaConnect Riders Work</div>
-        <p style="font-size:0.85rem;color:var(--text-muted);line-height:1.8">
-          🟣 Complete your rider profile so students and businesses can find you<br>
-          🟣 Students contact you directly for personal rides<br>
-          🟣 Businesses with delivery enabled contact you for package pickups<br>
-          🟣 You receive M-Pesa payment from each customer directly
-        </p>
+// ════════════════════════════════════════
+// RIDER DASHBOARD
+// ════════════════════════════════════════
+function buildRider() {
+  $('sbNav').innerHTML = `
+    <button class="nav-btn active" onclick="showPanel('r-home',this)"><span class="ni">🏠</span>Overview</button>
+    <p class="sb-section">Work</p>
+    <button class="nav-btn" onclick="showPanel('r-profile',this)"><span class="ni">🏍️</span>Rider profile</button>
+    <button class="nav-btn" onclick="showPanel('r-biz',this);loadRiderBiz()"><span class="ni">🏪</span>Delivery businesses</button>
+    <p class="sb-section">Account</p>
+    <button class="nav-btn" onclick="showPanel('r-acct',this)"><span class="ni">👤</span>Account</button>`;
+
+  const u = window.CU;
+  $('dashMain').innerHTML = `
+    <div id="r-home" class="panel active">
+      <div class="panel-header"><h1>Rider Dashboard</h1><p>Welcome, ${esc(u.name?.split(' ')[0]||'')}. Set up your profile to start receiving jobs.</p></div>
+      <div class="alert alert-info">
+        Complete your rider profile so students and businesses can find and contact you. Your profile goes live after admin approval.
       </div>
-      <button class="btn btn-primary" onclick="showPanel('r-profile',null)">✏️ Set Up My Rider Profile</button>
+      <button class="btn btn-primary" onclick="showPanel('r-profile',null)">Set up rider profile</button>
     </div>
-    <div id="r-profile" class="dash-panel">
-      <div class="dash-header"><h1>🏍️ My Rider Profile</h1><p>Visible to students and businesses once approved</p></div>
-      <div style="max-width:580px"><div class="card">
-        <div class="form-group"><label class="form-label">Full Name</label><input class="form-input" id="rp_name" value="${esc(u.name||'')}"></div>
-        <div class="form-row">
-          <div class="form-group"><label class="form-label">Phone *</label><input class="form-input" id="rp_phone" type="tel" value="${esc(u.phone||'')}" placeholder="0712 345 678"></div>
-          <div class="form-group"><label class="form-label">M-Pesa Number</label><input class="form-input" id="rp_mpesa" type="tel" placeholder="0712 345 678"></div>
+
+    <div id="r-profile" class="panel">
+      <div class="panel-header"><h1>Rider Profile</h1><p>This will be visible to students and businesses once approved.</p></div>
+      <div style="max-width:560px"><div class="card">
+        <div class="field"><label class="field-label">Full name</label><input class="field-input" id="rp_name" value="${esc(u.name||'')}"></div>
+        <div class="field-row">
+          <div class="field"><label class="field-label">Phone number *</label><input class="field-input" id="rp_phone" type="tel" value="${esc(u.phone||'')}" placeholder="0712 345 678"></div>
+          <div class="field"><label class="field-label">M-Pesa number</label><input class="field-input" id="rp_mpesa" type="tel" placeholder="0712 345 678"></div>
         </div>
-        <div class="form-row">
-          <div class="form-group"><label class="form-label">Bike Reg *</label><input class="form-input" id="rp_reg" placeholder="e.g. KMZB 001A"></div>
-          <div class="form-group"><label class="form-label">Bike Model</label><input class="form-input" id="rp_bike" placeholder="e.g. Honda CG 125"></div>
+        <div class="field-row">
+          <div class="field"><label class="field-label">Bike registration *</label><input class="field-input" id="rp_reg" placeholder="e.g. KMZB 001A"></div>
+          <div class="field"><label class="field-label">Bike model</label><input class="field-input" id="rp_bike" placeholder="e.g. Honda CG 125"></div>
         </div>
-        <div class="form-group"><label class="form-label">Operating Area *</label><input class="form-input" id="rp_area" placeholder="e.g. Chuka Campus to Tharaka Road"></div>
-        <div class="form-group"><label class="form-label">National ID</label><input class="form-input" id="rp_nid" placeholder="For verification"></div>
-        <div class="form-group"><label class="form-label">Profile / Bike Photo</label>
-          <div class="upload-area">
-            <input type="file" id="rp_img" accept="image/*" onchange="prevImg('rp_img','rp_prev')">
-            <div style="font-size:2rem;margin-bottom:0.4rem">📸</div><p>Upload your photo or bike photo</p>
-            <img id="rp_prev" class="img-preview" alt="preview">
+        <div class="field"><label class="field-label">Operating area *</label><input class="field-input" id="rp_area" placeholder="e.g. Chuka Campus to Tharaka Road"></div>
+        <div class="field"><label class="field-label">National ID</label><input class="field-input" id="rp_nid" placeholder="For verification"></div>
+        <div class="field">
+          <label class="field-label">Profile photo</label>
+          <div class="upload-zone">
+            <input type="file" id="rp_img" accept="image/*" onchange="previewImg('rp_img','rp_prev')">
+            <div class="uz-icon">📸</div><p>Upload your photo or bike photo</p>
+            <img id="rp_prev" class="preview-img" alt="">
           </div>
-          <div class="progress-wrap" id="rp_pw"><div class="progress-track"><div class="progress-fill" id="rp_pb"></div></div><div class="progress-label" id="rp_pl"></div></div>
+          <div class="upload-progress" id="rp_wrap">
+            <div class="prog-track"><div class="prog-fill" id="rp_bar"></div></div>
+            <div class="prog-label" id="rp_lbl"></div>
+          </div>
         </div>
-        <button class="submit-btn" id="rp_btn" onclick="saveRiderProfile()">💾 Save & Submit Profile</button>
-        <p style="font-size:0.72rem;color:var(--text-muted);text-align:center;margin-top:0.5rem">Profile will be reviewed by admin before going live</p>
+        <button class="btn btn-primary btn-full" id="rp_btn" onclick="saveRiderProfile()">Save and submit profile</button>
+        <p style="font-size:0.75rem;color:var(--gray-400);text-align:center;margin-top:8px">Profile reviewed by admin before going live.</p>
       </div></div>
     </div>
-    <div id="r-biz" class="dash-panel">
-      <div class="dash-header"><h1>🏪 Delivery Businesses</h1><p>These businesses accept boda deliveries — contact them for jobs</p></div>
-      <div class="listings-grid" id="r-bgrid"><div class="loading-block"><div class="spinner"></div></div></div>
+
+    <div id="r-biz" class="panel">
+      <div class="panel-header"><h1>Delivery Businesses</h1><p>Businesses that accept boda deliveries. Contact them directly for pickup jobs.</p></div>
+      <div class="listings-grid" id="r-biz-grid">${skelGrid(3)}</div>
     </div>
-    <div id="r-acct" class="dash-panel">
-      <div class="dash-header"><h1>👤 Account</h1></div>
-      <div class="card" style="max-width:440px">
-        <div style="font-family:'Syne',sans-serif;font-size:1.05rem;font-weight:700;margin-bottom:0.25rem">${esc(u.name||'')}</div>
-        <div style="font-size:0.82rem;color:var(--text-muted);margin-bottom:1rem">${esc(u.email||'')}</div>
-        <button class="btn btn-red btn-sm" onclick="doLogout()">🚪 Log Out</button>
+
+    <div id="r-acct" class="panel">
+      <div class="panel-header"><h1>Account</h1></div>
+      <div class="card" style="max-width:420px">
+        <div style="font-weight:700;font-size:1rem;margin-bottom:4px">${esc(u.name||'')}</div>
+        <div style="font-size:0.8rem;color:var(--gray-500);margin-bottom:16px">${esc(u.email||'')}</div>
+        <button class="btn btn-danger btn-sm" onclick="doLogout()">Sign out</button>
       </div>
     </div>`;
 }
 
-async function saveRiderProfile(){
-  const phone=document.getElementById('rp_phone').value.trim(), reg=document.getElementById('rp_reg').value.trim(), area=document.getElementById('rp_area').value.trim();
-  if(!phone||!reg||!area){showToast('⚠️','Missing Fields','Phone, bike reg and area are required.');return;}
-  const btn=document.getElementById('rp_btn'); btn.textContent='Saving…'; btn.disabled=true;
-  try{
-    let imageUrl='';
-    const f=document.getElementById('rp_img').files[0];
-    if(f) imageUrl=await cloudUpload(f,'rp_pb','rp_pl','rp_pw');
-    const nm=document.getElementById('rp_name').value.trim(), bike=document.getElementById('rp_bike').value.trim();
-    const {collection,addDoc,serverTimestamp}=window.fbFns;
-    await addDoc(window.fbFns.collection(window.fbDb,'listings'),{
-      name:nm, category:'boda', phone, mpesa:document.getElementById('rp_mpesa').value.trim(),
-      bikeReg:reg, bikeModel:bike, location:area, nationalId:document.getElementById('rp_nid').value.trim(),
-      description:`🏍️ ${bike||'Boda Rider'} · ${area}`, imageUrl,
-      status:'pending', ownerUid:window.currentUser.uid, ownerName:window.currentUser.name,
-      createdAt:serverTimestamp()
+async function saveRiderProfile() {
+  const phone = $('rp_phone').value.trim();
+  const reg   = $('rp_reg').value.trim();
+  const area  = $('rp_area').value.trim();
+  if (!phone||!reg||!area) { toast('⚠️','Missing fields','Phone, bike registration and area are required.',true); return; }
+  setBtn('rp_btn', true);
+  try {
+    let imageUrl = '';
+    const file = $('rp_img').files[0];
+    if (file) imageUrl = await cloudUpload(file,'rp_bar','rp_lbl','rp_wrap');
+    const bike = $('rp_bike').value.trim();
+    const { collection, addDoc, serverTimestamp } = window._fb;
+    await addDoc(collection(window._db,'listings'), {
+      name:      $('rp_name').value.trim(),
+      category:  'boda', phone,
+      mpesa:     $('rp_mpesa').value.trim(),
+      bikeReg:   reg, bikeModel:bike,
+      location:  area,
+      nationalId:$('rp_nid').value.trim(),
+      description:`Boda rider · ${bike} · ${area}`,
+      imageUrl,  status:'pending',
+      ownerUid:  window.CU.uid,
+      ownerName: window.CU.name,
+      createdAt: serverTimestamp()
     });
-    btn.textContent='💾 Save & Submit Profile'; btn.disabled=false;
-    showToast('✅','Profile Submitted!','Admin will review and approve your rider profile.');
-  }catch(e){btn.textContent='💾 Save & Submit Profile';btn.disabled=false;showToast('❌','Error',e.message);}
+    setBtn('rp_btn', false, 'Save and submit profile');
+    toast('✅','Profile submitted','Admin will review and approve it shortly.');
+  } catch(e) {
+    setBtn('rp_btn', false, 'Save and submit profile');
+    toast('❌','Error', e.message, true);
+  }
 }
 
-async function loadRiderBiz(){
-  const grid=document.getElementById('r-bgrid');
-  grid.innerHTML=`<div class="loading-block"><div class="spinner"></div></div>`;
-  try{
-    const {collection,getDocs,query,where,orderBy}=window.fbFns, db=window.fbDb;
-    const q=query(collection(db,'listings'),where('status','==','approved'),where('delivery','==',true),orderBy('createdAt','desc'));
-    const snap=await getDocs(q);
-    const items=snap.docs.map(d=>({id:d.id,...d.data()}));
-    if(!items.length){grid.innerHTML=`<div class="empty"><div class="ei">🏪</div><p>No delivery businesses yet.</p></div>`;return;}
-    grid.innerHTML=items.map(l=>studentCard(l)).join('');
-  }catch(e){grid.innerHTML=`<div class="empty"><p>${esc(e.message)}</p></div>`;}
+async function loadRiderBiz() {
+  const grid = $('r-biz-grid'); if (!grid) return;
+  grid.innerHTML = skelGrid(3);
+  try {
+    const { collection, getDocs, query, where, orderBy } = window._fb;
+    const q = query(collection(window._db,'listings'), where('status','==','approved'), where('delivery','==',true), orderBy('createdAt','desc'));
+    const snap  = await getDocs(q);
+    const items = snap.docs.map(d => ({ id:d.id,...d.data() }));
+    if (!items.length) { grid.innerHTML=`<div class="empty-state" style="grid-column:1/-1"><div class="icon">🏪</div><p>No delivery businesses yet.</p></div>`; return; }
+    grid.innerHTML = items.map(l => studentCard(l)).join('');
+  } catch(e) { grid.innerHTML=`<div class="empty-state" style="grid-column:1/-1"><p>${esc(e.message)}</p></div>`; }
 }
 
-// ══════════════════════════════════════════
-// ⚙️ ADMIN DASHBOARD
-// ══════════════════════════════════════════
-function buildAdmin(){
-  document.getElementById('sidebarNav').innerHTML=`
-    <button class="nav-item active" onclick="showPanel('a-home',this)"><span class="nav-icon">📊</span>Overview</button>
-    <div class="sidebar-section">Moderation</div>
-    <button class="nav-item" onclick="showPanel('a-pending',this);loadPending()" id="a-pnav">
-      <span class="nav-icon">⏳</span>Pending Approval<span class="nav-badge" id="pBadge" style="display:none">0</span>
+// ════════════════════════════════════════
+// ADMIN DASHBOARD
+// ════════════════════════════════════════
+function buildAdmin() {
+  $('sbNav').innerHTML = `
+    <button class="nav-btn active" onclick="showPanel('a-home',this)"><span class="ni">📊</span>Overview</button>
+    <p class="sb-section">Moderation</p>
+    <button class="nav-btn" onclick="showPanel('a-pending',this);loadPending()" id="a-pnav">
+      <span class="ni">⏳</span>Pending approval<span class="nav-cnt" id="pCnt" style="display:none">0</span>
     </button>
-    <button class="nav-item" onclick="showPanel('a-all',this);loadAllL()"><span class="nav-icon">📋</span>All Listings</button>
-    <div class="sidebar-section">Users</div>
-    <button class="nav-item" onclick="showPanel('a-users',this);loadUsers()"><span class="nav-icon">👥</span>All Users</button>`;
-  document.getElementById('dashMain').innerHTML=`
-    <div id="a-home" class="dash-panel active">
-      <div class="dash-header"><h1>⚙️ Admin Panel</h1><p>Manage all listings, users and approvals for ChukaConnect</p></div>
-      <div class="stats-row">
-        <div class="stat-card"><div class="stat-num" id="as1">—</div><div class="stat-label">Total Listings</div></div>
-        <div class="stat-card green"><div class="stat-num" id="as2">—</div><div class="stat-label">Approved & Live</div></div>
-        <div class="stat-card orange"><div class="stat-num" id="as3">—</div><div class="stat-label">Pending Review</div></div>
-        <div class="stat-card blue"><div class="stat-num" id="as4">—</div><div class="stat-label">Registered Users</div></div>
+    <button class="nav-btn" onclick="showPanel('a-all',this);loadAllListings()"><span class="ni">📋</span>All listings</button>
+    <p class="sb-section">Users</p>
+    <button class="nav-btn" onclick="showPanel('a-users',this);loadUsers()"><span class="ni">👥</span>All users</button>`;
+
+  $('dashMain').innerHTML = `
+    <div id="a-home" class="panel active">
+      <div class="panel-header"><h1>Admin Panel</h1><p>Review listings, manage users, and control what students see.</p></div>
+      <div class="stats-grid">
+        <div class="stat-tile"><div class="n" id="as-all">—</div><div class="l">Total listings</div></div>
+        <div class="stat-tile green"><div class="n" id="as-live">—</div><div class="l">Approved and live</div></div>
+        <div class="stat-tile amber"><div class="n" id="as-pend">—</div><div class="l">Pending review</div></div>
+        <div class="stat-tile blue"><div class="n" id="as-users">—</div><div class="l">Registered users</div></div>
       </div>
-      <div style="display:flex;gap:1rem;flex-wrap:wrap">
-        <button class="btn btn-orange" onclick="showPanel('a-pending',null);loadPending()">⏳ Review Pending</button>
-        <button class="btn btn-outline" onclick="showPanel('a-all',null);loadAllL()">📋 All Listings</button>
-        <button class="btn btn-outline" onclick="showPanel('a-users',null);loadUsers()">👥 All Users</button>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <button class="btn btn-primary" onclick="showPanel('a-pending',null);loadPending()">Review pending listings</button>
+        <button class="btn btn-secondary" onclick="showPanel('a-users',null);loadUsers()">View all users</button>
       </div>
     </div>
-    <div id="a-pending" class="dash-panel">
-      <div class="dash-header"><h1>⏳ Pending Approval</h1><p>Review and approve or reject submitted listings</p></div>
-      <div id="a-pgrid"><div class="loading-block"><div class="spinner"></div></div></div>
+
+    <div id="a-pending" class="panel">
+      <div class="panel-header"><h1>Pending Approval</h1><p>Approve or reject listings before they go live to students.</p></div>
+      <div id="a-pgrid"><div style="padding:32px;text-align:center"><div class="spinner"></div></div></div>
     </div>
-    <div id="a-all" class="dash-panel">
-      <div class="dash-header"><h1>📋 All Listings</h1></div>
-      <div id="a-agrid"><div class="loading-block"><div class="spinner"></div></div></div>
+
+    <div id="a-all" class="panel">
+      <div class="panel-header"><h1>All Listings</h1></div>
+      <div id="a-agrid"><div style="padding:32px;text-align:center"><div class="spinner"></div></div></div>
     </div>
-    <div id="a-users" class="dash-panel">
-      <div class="dash-header"><h1>👥 Registered Users</h1></div>
-      <div class="card" style="overflow-x:auto">
+
+    <div id="a-users" class="panel">
+      <div class="panel-header"><h1>Registered Users</h1></div>
+      <div class="card" style="overflow-x:auto;padding:0">
         <table class="data-table">
           <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Phone</th><th>Joined</th></tr></thead>
-          <tbody id="a-utbody"><tr><td colspan="5" style="text-align:center;padding:2rem"><div class="spinner"></div></td></tr></tbody>
+          <tbody id="a-tbody"><tr><td colspan="5" style="text-align:center;padding:32px"><div class="spinner" style="margin:0 auto"></div></td></tr></tbody>
         </table>
       </div>
     </div>`;
+
   loadAdminStats();
   loadPending();
 }
 
-async function loadAdminStats(){
-  try{
-    const {collection,getDocs,query,where}=window.fbFns, db=window.fbDb;
-    const [al,ap,pn,us]=await Promise.all([
+async function loadAdminStats() {
+  try {
+    const { collection, getDocs, query, where } = window._fb;
+    const db = window._db;
+    const [al,ap,pn,us] = await Promise.all([
       getDocs(collection(db,'listings')),
       getDocs(query(collection(db,'listings'),where('status','==','approved'))),
       getDocs(query(collection(db,'listings'),where('status','==','pending'))),
       getDocs(collection(db,'users')),
     ]);
-    document.getElementById('as1').textContent=al.size;
-    document.getElementById('as2').textContent=ap.size;
-    document.getElementById('as3').textContent=pn.size;
-    document.getElementById('as4').textContent=us.size;
-    const badge=document.getElementById('pBadge');
-    if(pn.size>0){badge.textContent=pn.size;badge.style.display='inline-block';}
-    else badge.style.display='none';
-  }catch(e){}
+    if($('as-all'))   $('as-all').textContent   = al.size;
+    if($('as-live'))  $('as-live').textContent  = ap.size;
+    if($('as-pend'))  $('as-pend').textContent  = pn.size;
+    if($('as-users')) $('as-users').textContent = us.size;
+    const cnt = $('pCnt');
+    if (cnt) { cnt.textContent = pn.size; cnt.style.display = pn.size > 0 ? 'inline-block' : 'none'; }
+  } catch(e) {}
 }
 
-async function loadPending(){
-  const grid=document.getElementById('a-pgrid');
-  grid.innerHTML=`<div class="loading-block"><div class="spinner"></div></div>`;
-  try{
-    const {collection,getDocs,query,where,orderBy}=window.fbFns, db=window.fbDb;
-    const snap=await getDocs(query(collection(db,'listings'),where('status','==','pending'),orderBy('createdAt','asc')));
-    const items=snap.docs.map(d=>({id:d.id,...d.data()}));
-    if(!items.length){grid.innerHTML=`<div class="empty" style="grid-column:unset"><div class="ei">✅</div><p>All caught up! No pending listings.</p></div>`;return;}
-    grid.innerHTML=`<div class="listings-grid">${items.map(l=>adminCard(l)).join('')}</div>`;
-  }catch(e){grid.innerHTML=`<div class="empty"><p>${esc(e.message)}</p></div>`;}
+async function loadPending() {
+  const wrap = $('a-pgrid'); if (!wrap) return;
+  wrap.innerHTML = skelGrid(3);
+  try {
+    const { collection, getDocs, query, where, orderBy } = window._fb;
+    const snap  = await getDocs(query(collection(window._db,'listings'), where('status','==','pending'), orderBy('createdAt','asc')));
+    const items = snap.docs.map(d => ({ id:d.id,...d.data() }));
+    if (!items.length) {
+      wrap.innerHTML = `<div class="empty-state"><div class="icon">✅</div><p>All listings reviewed. Nothing pending.</p></div>`;
+      return;
+    }
+    wrap.innerHTML = `<div class="listings-grid">${items.map(l => adminCard(l)).join('')}</div>`;
+  } catch(e) { wrap.innerHTML = `<div class="empty-state"><p>${esc(e.message)}</p></div>`; }
 }
 
-async function loadAllL(){
-  const grid=document.getElementById('a-agrid');
-  grid.innerHTML=`<div class="loading-block"><div class="spinner"></div></div>`;
-  try{
-    const {collection,getDocs,query,orderBy}=window.fbFns, db=window.fbDb;
-    const snap=await getDocs(query(collection(db,'listings'),orderBy('createdAt','desc')));
-    const items=snap.docs.map(d=>({id:d.id,...d.data()}));
-    if(!items.length){grid.innerHTML=`<div class="empty" style="grid-column:unset"><div class="ei">📭</div><p>No listings yet.</p></div>`;return;}
-    grid.innerHTML=`<div class="listings-grid">${items.map(l=>adminCard(l)).join('')}</div>`;
-  }catch(e){grid.innerHTML=`<div class="empty"><p>${esc(e.message)}</p></div>`;}
+async function loadAllListings() {
+  const wrap = $('a-agrid'); if (!wrap) return;
+  wrap.innerHTML = skelGrid(4);
+  try {
+    const { collection, getDocs, query, orderBy } = window._fb;
+    const snap  = await getDocs(query(collection(window._db,'listings'), orderBy('createdAt','desc')));
+    const items = snap.docs.map(d => ({ id:d.id,...d.data() }));
+    if (!items.length) { wrap.innerHTML=`<div class="empty-state"><div class="icon">📭</div><p>No listings yet.</p></div>`; return; }
+    wrap.innerHTML = `<div class="listings-grid">${items.map(l => adminCard(l)).join('')}</div>`;
+  } catch(e) { wrap.innerHTML = `<div class="empty-state"><p>${esc(e.message)}</p></div>`; }
 }
 
-function adminCard(l){
-  const m=CAT[l.category]||CAT.other;
-  const img=l.imageUrl?`<img src="${esc(l.imageUrl)}" style="width:100%;height:100%;object-fit:cover">`:`<span class="emoji-big">${m.e}</span>`;
-  const sc=l.status==='approved'?'pill-approved':l.status==='rejected'?'pill-rejected':'pill-pending';
-  const sl=l.status==='approved'?'✅ Approved':l.status==='rejected'?'❌ Rejected':'⏳ Pending';
-  return `<div class="listing-card">
-    <div class="lcard-img" style="background:${m.c}">${img}<span class="pill ${sc}">${sl}</span></div>
+function adminCard(l) {
+  const c  = CATS[l.category] || CATS.other;
+  const img = l.imageUrl ? `<img src="${esc(l.imageUrl)}" style="width:100%;height:100%;object-fit:cover">` : `<span class="cat-icon">${c.icon}</span>`;
+  const statusBadge = l.status==='approved' ? `<span class="badge badge-green">Approved</span>` : l.status==='rejected' ? `<span class="badge badge-red">Rejected</span>` : `<span class="badge badge-amber">Pending</span>`;
+  return `<div class="lcard">
+    <div class="lcard-img" style="background:${c.color}">${img}
+      <div class="lcard-badge">${statusBadge}</div>
+    </div>
     <div class="lcard-body">
-      <h4>${esc(l.name)}</h4>
-      <p class="lcard-sub">${m.l} · 📍 ${esc(l.location||'')}</p>
-      <p class="lcard-sub">👤 ${esc(l.ownerName||'Unknown')} · 📞 ${esc(l.phone||'—')}</p>
-      ${l.description?`<p class="lcard-sub">${esc(l.description).substring(0,60)}</p>`:''}
+      <div class="lcard-name">${esc(l.name)}</div>
+      <div class="lcard-meta">${c.label} · ${esc(l.location||'')}</div>
+      <div class="lcard-meta">Owner: ${esc(l.ownerName||'Unknown')} · ${esc(l.phone||'')}</div>
+      ${l.description ? `<div class="lcard-meta">${esc(l.description).substring(0,60)}</div>` : ''}
       <div class="lcard-actions">
-        ${l.status!=='approved'?`<button class="btn btn-green btn-sm" onclick="setStatus('${l.id}','approved')">✅ Approve</button>`:''}
-        ${l.status!=='rejected'?`<button class="btn btn-red btn-sm" onclick="setStatus('${l.id}','rejected')">❌ Reject</button>`:''}
-        <button class="btn btn-outline btn-sm" onclick="adminDel('${l.id}')">🗑️</button>
+        ${l.status!=='approved' ? `<button class="btn btn-success btn-sm" onclick="setStatus('${l.id}','approved')">Approve</button>` : ''}
+        ${l.status!=='rejected' ? `<button class="btn btn-danger btn-sm"  onclick="setStatus('${l.id}','rejected')">Reject</button>`  : ''}
+        <button class="btn btn-ghost btn-sm" onclick="adminDel('${l.id}')">Delete</button>
       </div>
     </div>
   </div>`;
 }
 
-async function setStatus(id,status){
-  try{
-    await window.fbFns.updateDoc(window.fbFns.doc(window.fbDb,'listings',id),{status});
-    showToast(status==='approved'?'✅':'❌',status==='approved'?'Listing Approved!':'Listing Rejected',status==='approved'?'Now visible to all students.':'Listing has been hidden.');
-    loadPending(); loadAllL(); loadAdminStats();
-  }catch(e){showToast('❌','Error',e.message);}
+async function setStatus(id, status) {
+  try {
+    const { doc, updateDoc } = window._fb;
+    await updateDoc(doc(window._db,'listings',id), { status });
+    toast('✅', status==='approved' ? 'Listing approved' : 'Listing rejected', status==='approved' ? 'Now visible to students.' : 'Hidden from students.');
+    loadPending(); loadAllListings(); loadAdminStats();
+  } catch(e) { toast('❌','Error',e.message,true); }
 }
 
-async function adminDel(id){
-  if(!confirm('Permanently delete?'))return;
-  try{await window.fbFns.deleteDoc(window.fbFns.doc(window.fbDb,'listings',id));showToast('🗑️','Deleted','Listing removed.');loadAllL();loadAdminStats();}
-  catch(e){showToast('❌','Error',e.message);}
+async function adminDel(id) {
+  if (!confirm('Permanently delete this listing?')) return;
+  try {
+    const { doc, deleteDoc } = window._fb;
+    await deleteDoc(doc(window._db,'listings',id));
+    toast('✅','Deleted','Listing permanently removed.');
+    loadAllListings(); loadAdminStats();
+  } catch(e) { toast('❌','Error',e.message,true); }
 }
 
-async function loadUsers(){
-  const tbody=document.getElementById('a-utbody');
-  try{
-    const {collection,getDocs,query,orderBy}=window.fbFns, db=window.fbDb;
-    const snap=await getDocs(query(collection(db,'users'),orderBy('createdAt','desc')));
-    const users=snap.docs.map(d=>({id:d.id,...d.data()}));
-    if(!users.length){tbody.innerHTML=`<tr><td colspan="5" style="text-align:center;padding:2rem;color:var(--text-muted)">No users yet.</td></tr>`;return;}
-    const ri={student:'🎓',business:'🏪',rider:'🏍️',admin:'⚙️'};
-    tbody.innerHTML=users.map(u=>`
+async function loadUsers() {
+  const tbody = $('a-tbody'); if (!tbody) return;
+  try {
+    const { collection, getDocs, query, orderBy } = window._fb;
+    const snap  = await getDocs(query(collection(window._db,'users'), orderBy('createdAt','desc')));
+    const users = snap.docs.map(d => ({ id:d.id,...d.data() }));
+    if (!users.length) { tbody.innerHTML=`<tr><td colspan="5" style="text-align:center;padding:32px;color:var(--gray-500)">No users yet.</td></tr>`; return; }
+    tbody.innerHTML = users.map(u => `
       <tr>
-        <td><strong>${esc(u.name||'—')}</strong></td>
-        <td style="color:var(--text-muted);font-size:0.82rem">${esc(u.email||'—')}</td>
-        <td><span class="status-badge" style="background:rgba(108,99,255,0.15);color:var(--primary)">${ri[u.role]||''} ${u.role||'—'}</span></td>
-        <td style="color:var(--text-muted);font-size:0.82rem">${esc(u.phone||'—')}</td>
-        <td style="color:var(--text-dim);font-size:0.78rem">${u.createdAt?.toDate?u.createdAt.toDate().toLocaleDateString('en-KE'):'-'}</td>
+        <td style="font-weight:600">${esc(u.name||'—')}</td>
+        <td style="color:var(--gray-500)">${esc(u.email||'—')}</td>
+        <td><span class="badge badge-blue">${esc(u.role||'—')}</span></td>
+        <td style="color:var(--gray-500)">${esc(u.phone||'—')}</td>
+        <td style="color:var(--gray-400);font-size:0.78rem">${u.createdAt?.toDate ? u.createdAt.toDate().toLocaleDateString('en-KE',{day:'numeric',month:'short',year:'numeric'}) : '—'}</td>
       </tr>`).join('');
-  }catch(e){tbody.innerHTML=`<tr><td colspan="5" style="color:var(--red);padding:1rem">${esc(e.message)}</td></tr>`;}
-}
-
-// ══ CLOUDINARY ══
-async function cloudUpload(file,barId,labelId,wrapId){
-  if(file.size>5*1024*1024)throw new Error('Image too large. Max 5MB.');
-  document.getElementById(wrapId).style.display='block';
-  document.getElementById(barId).style.width='10%';
-  document.getElementById(labelId).textContent='Uploading photo…';
-  const fd=new FormData(); fd.append('file',file); fd.append('upload_preset',CP); fd.append('folder','chukaconnect');
-  let pct=10;
-  const t=setInterval(()=>{pct=Math.min(pct+8,85);document.getElementById(barId).style.width=pct+'%';},300);
-  const res=await fetch(`https://api.cloudinary.com/v1_1/${CC}/image/upload`,{method:'POST',body:fd});
-  clearInterval(t);
-  if(!res.ok)throw new Error('Photo upload failed. Check Cloudinary preset is Unsigned.');
-  const data=await res.json();
-  document.getElementById(barId).style.width='100%';
-  document.getElementById(labelId).textContent='✅ Uploaded!';
-  return data.secure_url;
-}
-
-function prevImg(inputId,previewId){
-  const f=document.getElementById(inputId)?.files[0]; if(!f)return;
-  const r=new FileReader(); r.onload=e=>{const el=document.getElementById(previewId);if(el){el.src=e.target.result;el.style.display='block';}};
-  r.readAsDataURL(f);
+  } catch(e) { tbody.innerHTML=`<tr><td colspan="5" style="color:var(--red);padding:16px">${esc(e.message)}</td></tr>`; }
 }
 </script>
 </body>
