@@ -497,7 +497,7 @@ function showPage(name) {
   }
 }
 
-function showPanel(id, navEl) {
+function showPanel(id, navEl, pushState=true) {
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
   const p = $(id); if (p) p.classList.add('active');
   if (navEl) {
@@ -506,7 +506,27 @@ function showPanel(id, navEl) {
   }
   $('sidebar')?.classList.remove('open');
   $('sbOverlay')?.classList.remove('open');
+  // Update URL so browser back button works
+  if (pushState) {
+    const url = new URL(window.location.href);
+    url.searchParams.set('panel', id);
+    window.history.pushState({ panel: id }, '', url);
+  }
+  window.scrollTo({ top:0, behavior:'smooth' });
 }
+
+// Handle browser back/forward buttons
+window.addEventListener('popstate', e => {
+  if (e.state?.panel) {
+    showPanel(e.state.panel, null, false);
+    // Re-highlight correct nav button
+    const btn = document.querySelector(`.nav-btn[onclick*="${e.state.panel}"]`);
+    if (btn) {
+      document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+    }
+  }
+});
 
 function toast(icon, title, body, isError) {
   $('t_icon').textContent  = icon;
@@ -1211,7 +1231,7 @@ async function loadPending() {
       wrap.innerHTML = `<div class="empty-state"><div class="icon">✅</div><p>All listings reviewed. Nothing pending.</p></div>`;
       return;
     }
-    wrap.innerHTML = `<div class="listings-grid">${items.map(l => adminCard(l)).join('')}</div>`;
+    wrap.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:16px">${items.map(l => adminCard(l)).join('')}</div>`;
   } catch(e) { wrap.innerHTML = `<div class="empty-state"><p>${esc(e.message)}</p></div>`; }
 }
 
@@ -1223,28 +1243,63 @@ async function loadAllListings() {
     const snap  = await getDocs(query(collection(window._db,'listings'), orderBy('createdAt','desc')));
     const items = snap.docs.map(d => ({ id:d.id,...d.data() }));
     if (!items.length) { wrap.innerHTML=`<div class="empty-state"><div class="icon">📭</div><p>No listings yet.</p></div>`; return; }
-    wrap.innerHTML = `<div class="listings-grid">${items.map(l => adminCard(l)).join('')}</div>`;
+    wrap.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:16px">${items.map(l => adminCard(l)).join('')}</div>`;
   } catch(e) { wrap.innerHTML = `<div class="empty-state"><p>${esc(e.message)}</p></div>`; }
 }
 
 function adminCard(l) {
-  const c  = CATS[l.category] || CATS.other;
-  const img = l.imageUrl ? `<img src="${esc(l.imageUrl)}" style="width:100%;height:100%;object-fit:cover">` : `<span class="cat-icon">${c.icon}</span>`;
-  const statusBadge = l.status==='approved' ? `<span class="badge badge-green">Approved</span>` : l.status==='rejected' ? `<span class="badge badge-red">Rejected</span>` : `<span class="badge badge-amber">Pending</span>`;
-  return `<div class="lcard">
-    <div class="lcard-img" style="background:${c.color}">${img}
-      <div class="lcard-badge">${statusBadge}</div>
-    </div>
-    <div class="lcard-body">
-      <div class="lcard-name">${esc(l.name)}</div>
-      <div class="lcard-meta">${c.label} · ${esc(l.location||'')}</div>
-      <div class="lcard-meta">Owner: ${esc(l.ownerName||'Unknown')} · ${esc(l.phone||'')}</div>
-      ${l.description ? `<div class="lcard-meta">${esc(l.description).substring(0,60)}</div>` : ''}
-      <div class="lcard-actions">
-        ${l.status!=='approved' ? `<button class="btn btn-success btn-sm" onclick="setStatus('${l.id}','approved')">Approve</button>` : ''}
-        ${l.status!=='rejected' ? `<button class="btn btn-danger btn-sm"  onclick="setStatus('${l.id}','rejected')">Reject</button>`  : ''}
-        <button class="btn btn-ghost btn-sm" onclick="adminDel('${l.id}')">Delete</button>
+  const c = CATS[l.category] || CATS.other;
+  const statusBadge = l.status==='approved'
+    ? `<span class="badge badge-green">Approved</span>`
+    : l.status==='rejected'
+    ? `<span class="badge badge-red">Rejected</span>`
+    : `<span class="badge badge-amber">Pending review</span>`;
+
+  const imageSection = l.imageUrl
+    ? `<div style="margin-bottom:14px;border-radius:10px;overflow:hidden;border:1px solid var(--gray-200)">
+        <img src="${esc(l.imageUrl)}" alt="${esc(l.name)}"
+          style="width:100%;height:200px;object-fit:cover;display:block;cursor:pointer"
+          onclick="window.open('${esc(l.imageUrl)}','_blank')"
+          title="Click to view full image">
+        <div style="padding:6px 10px;background:var(--gray-50);font-size:0.72rem;color:var(--gray-500);display:flex;align-items:center;gap:6px">
+          <span>📷</span> Photo uploaded · <a href="${esc(l.imageUrl)}" target="_blank" style="color:var(--blue);font-weight:600">Open full size</a>
+        </div>
+      </div>`
+    : `<div style="height:80px;background:var(--gray-100);border-radius:10px;display:flex;align-items:center;justify-content:center;margin-bottom:14px;border:1px dashed var(--gray-300)">
+        <span style="font-size:0.8rem;color:var(--gray-400)">No photo uploaded</span>
+      </div>`;
+
+  return `<div style="background:var(--white);border:1px solid var(--gray-200);border-radius:14px;padding:16px;transition:box-shadow 200ms">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+      <div style="display:flex;align-items:center;gap:8px">
+        <span style="font-size:1.4rem">${c.icon}</span>
+        <div>
+          <div style="font-weight:700;font-size:0.9375rem;color:var(--gray-900)">${esc(l.name)}</div>
+          <div style="font-size:0.78rem;color:var(--gray-500)">${c.label}</div>
+        </div>
       </div>
+      ${statusBadge}
+    </div>
+
+    ${imageSection}
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;font-size:0.8125rem">
+      <div><span style="color:var(--gray-400);font-size:0.72rem;display:block;margin-bottom:2px">OWNER</span><span style="color:var(--gray-700);font-weight:500">${esc(l.ownerName||'Unknown')}</span></div>
+      <div><span style="color:var(--gray-400);font-size:0.72rem;display:block;margin-bottom:2px">PHONE</span><span style="color:var(--gray-700);font-weight:500">${esc(l.phone||'—')}</span></div>
+      <div><span style="color:var(--gray-400);font-size:0.72rem;display:block;margin-bottom:2px">LOCATION</span><span style="color:var(--gray-700)">${esc(l.location||'—')}</span></div>
+      <div><span style="color:var(--gray-400);font-size:0.72rem;display:block;margin-bottom:2px">PRICE</span><span style="color:var(--gray-700)">${l.price ? 'KSh ' + esc(String(l.price)) : '—'}</span></div>
+    </div>
+
+    ${l.description ? `<div style="font-size:0.8125rem;color:var(--gray-600);background:var(--gray-50);padding:10px;border-radius:8px;margin-bottom:14px;line-height:1.5">${esc(l.description).substring(0,120)}${l.description.length>120?'…':''}</div>` : ''}
+
+    ${l.till ? `<div style="font-size:0.78rem;color:var(--gray-500);margin-bottom:10px">M-Pesa Till/Paybill: <strong>${esc(l.till)}</strong></div>` : ''}
+    ${l.delivery ? `<div style="font-size:0.78rem;color:var(--green);margin-bottom:10px;font-weight:600">✓ Offers delivery</div>` : ''}
+    ${(l.amenities||[]).length ? `<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:12px">${(l.amenities||[]).map(a=>`<span style="background:var(--gray-100);color:var(--gray-600);font-size:0.68rem;padding:2px 8px;border-radius:100px">${esc(a)}</span>`).join('')}</div>` : ''}
+
+    <div style="display:flex;gap:8px;padding-top:12px;border-top:1px solid var(--gray-100)">
+      ${l.status!=='approved' ? `<button class="btn btn-success btn-sm" style="flex:1" onclick="setStatus('${l.id}','approved')">✓ Approve</button>` : '<div style="flex:1;text-align:center;font-size:0.78rem;color:var(--green);font-weight:600;padding:6px">Live</div>'}
+      ${l.status!=='rejected' ? `<button class="btn btn-danger btn-sm" style="flex:1" onclick="setStatus('${l.id}','rejected')">✕ Reject</button>` : '<div style="flex:1;text-align:center;font-size:0.78rem;color:var(--red);font-weight:600;padding:6px">Rejected</div>'}
+      <button class="btn btn-ghost btn-sm" onclick="adminDel('${l.id}')" title="Delete permanently">🗑</button>
     </div>
   </div>`;
 }
