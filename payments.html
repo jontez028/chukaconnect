@@ -1,0 +1,1175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ChukaConnect Payments</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet">
+<!-- QR Code library -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+<style>
+:root {
+  --blue:#2563EB; --blue-dark:#1D4ED8; --blue-light:#EFF6FF; --blue-mid:#BFDBFE;
+  --green:#16A34A; --green-bg:#F0FDF4; --green-light:#DCFCE7;
+  --red:#DC2626; --red-bg:#FEF2F2;
+  --amber:#D97706; --amber-bg:#FFFBEB;
+  --mpesa:#00A651; --mpesa-dark:#007A3D; --mpesa-light:#E8F8EF;
+  --airtel:#E4002B; --airtel-light:#FFF0F3;
+  --bank:#1E3A5F; --bank-light:#EEF3F9;
+  --gray-50:#F9FAFB; --gray-100:#F3F4F6; --gray-200:#E5E7EB;
+  --gray-300:#D1D5DB; --gray-400:#9CA3AF; --gray-500:#6B7280;
+  --gray-600:#4B5563; --gray-700:#374151; --gray-800:#1F2937; --gray-900:#111827;
+  --white:#FFFFFF;
+  --r-sm:6px; --r-md:10px; --r-lg:14px; --r-xl:20px;
+  --shadow-sm:0 1px 3px rgba(0,0,0,0.08); --shadow-md:0 4px 12px rgba(0,0,0,0.1); --shadow-lg:0 10px 30px rgba(0,0,0,0.12);
+  --ease:cubic-bezier(0.4,0,0.2,1); --ease-out:cubic-bezier(0,0,0.2,1);
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+html{font-size:16px;scroll-behavior:smooth;}
+body{font-family:'Inter',sans-serif;background:var(--gray-50);color:var(--gray-900);-webkit-font-smoothing:antialiased;}
+img{display:block;max-width:100%;}
+button{font-family:inherit;cursor:pointer;}
+
+/* ── LAYOUT ── */
+.app{display:flex;min-height:100vh;}
+.sidebar{width:260px;background:var(--white);border-right:1px solid var(--gray-200);position:fixed;top:0;bottom:0;left:0;overflow-y:auto;z-index:100;display:flex;flex-direction:column;transition:transform 250ms var(--ease-out);}
+.sb-brand{padding:20px 18px;border-bottom:1px solid var(--gray-100);}
+.sb-logo{font-family:'Manrope',sans-serif;font-size:1.1rem;font-weight:800;color:var(--blue);}
+.sb-logo span{color:var(--gray-900);}
+.sb-sub{font-size:0.72rem;color:var(--gray-400);margin-top:2px;}
+.sb-nav{flex:1;padding:10px;}
+.sb-section{font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--gray-400);padding:14px 10px 4px;}
+.nav-btn{display:flex;align-items:center;gap:10px;width:100%;padding:9px 10px;border-radius:var(--r-md);border:none;background:none;font-family:inherit;font-size:0.875rem;font-weight:500;color:var(--gray-600);text-align:left;transition:all 120ms var(--ease);}
+.nav-btn:hover{background:var(--gray-100);color:var(--gray-900);}
+.nav-btn.active{background:var(--blue-light);color:var(--blue);font-weight:600;}
+.nav-btn .ni{font-size:1rem;width:18px;text-align:center;flex-shrink:0;}
+.main{margin-left:260px;flex:1;padding:32px;}
+.page{display:none;animation:fadeIn 180ms var(--ease-out);}
+.page.active{display:block;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
+.page-header{margin-bottom:28px;}
+.page-header h1{font-family:'Manrope',sans-serif;font-size:1.5rem;font-weight:800;color:var(--gray-900);letter-spacing:-0.01em;}
+.page-header p{font-size:0.875rem;color:var(--gray-500);margin-top:4px;}
+
+/* ── BUTTONS ── */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;font-family:inherit;font-size:0.875rem;font-weight:600;border:none;border-radius:var(--r-md);transition:all 150ms var(--ease);white-space:nowrap;}
+.btn:disabled{opacity:0.5;cursor:not-allowed!important;}
+.btn-primary{background:var(--blue);color:var(--white);padding:10px 20px;}
+.btn-primary:hover:not(:disabled){background:var(--blue-dark);transform:translateY(-1px);box-shadow:var(--shadow-sm);}
+.btn-secondary{background:var(--white);color:var(--gray-700);border:1px solid var(--gray-200);padding:10px 20px;}
+.btn-secondary:hover:not(:disabled){background:var(--gray-50);border-color:var(--gray-300);}
+.btn-full{width:100%;padding:13px 20px;font-size:0.9375rem;border-radius:var(--r-md);}
+.btn-sm{padding:6px 14px;font-size:0.8125rem;border-radius:var(--r-sm);}
+.btn-loading{position:relative;color:transparent!important;}
+.btn-loading::after{content:'';position:absolute;width:14px;height:14px;border:2px solid rgba(255,255,255,0.35);border-top-color:#fff;border-radius:50%;animation:spin 0.7s linear infinite;}
+.btn-mpesa{background:var(--mpesa);color:var(--white);}
+.btn-mpesa:hover:not(:disabled){background:var(--mpesa-dark);}
+.btn-airtel{background:var(--airtel);color:var(--white);}
+.btn-airtel:hover:not(:disabled){background:#C0001F;}
+.btn-bank{background:var(--bank);color:var(--white);}
+.btn-bank:hover:not(:disabled){background:#162d4a;}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── FORMS ── */
+.field{margin-bottom:16px;}
+.field-label{display:block;font-size:0.8125rem;font-weight:600;color:var(--gray-700);margin-bottom:5px;}
+.field-input{width:100%;padding:10px 12px;font-family:inherit;font-size:0.9rem;color:var(--gray-900);background:var(--white);border:1px solid var(--gray-200);border-radius:var(--r-md);outline:none;transition:border-color 150ms,box-shadow 150ms;}
+.field-input:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(37,99,235,0.1);}
+.field-input::placeholder{color:var(--gray-400);}
+.field-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.field-hint{font-size:0.75rem;color:var(--gray-400);margin-top:4px;}
+
+/* ── CARDS ── */
+.card{background:var(--white);border:1px solid var(--gray-200);border-radius:var(--r-lg);padding:20px;}
+.card-flat{background:var(--gray-50);border:1px solid var(--gray-200);border-radius:var(--r-md);padding:16px;}
+
+/* ── PAYMENT METHOD TABS ── */
+.pay-methods{display:flex;gap:8px;margin-bottom:24px;flex-wrap:wrap;}
+.pay-method-btn{display:flex;align-items:center;gap:8px;padding:10px 16px;border-radius:var(--r-md);border:2px solid var(--gray-200);background:var(--white);font-family:inherit;font-size:0.875rem;font-weight:600;color:var(--gray-600);cursor:pointer;transition:all 150ms var(--ease);}
+.pay-method-btn:hover{border-color:var(--gray-400);}
+.pay-method-btn.active-mpesa{border-color:var(--mpesa);background:var(--mpesa-light);color:var(--mpesa);}
+.pay-method-btn.active-airtel{border-color:var(--airtel);background:var(--airtel-light);color:var(--airtel);}
+.pay-method-btn.active-bank{border-color:var(--bank);background:var(--bank-light);color:var(--bank);}
+.pay-panel{display:none;}
+.pay-panel.active{display:block;}
+
+/* ── AMOUNT DISPLAY ── */
+.amount-display{background:linear-gradient(135deg,#1E3A5F,#2563EB);border-radius:var(--r-lg);padding:24px;color:var(--white);margin-bottom:24px;position:relative;overflow:hidden;}
+.amount-display::before{content:'';position:absolute;top:-30px;right:-30px;width:120px;height:120px;border-radius:50%;background:rgba(255,255,255,0.07);}
+.amount-label{font-size:0.8rem;opacity:0.7;margin-bottom:4px;}
+.amount-value{font-family:'Manrope',sans-serif;font-size:2.2rem;font-weight:800;line-height:1;}
+.amount-desc{font-size:0.8rem;opacity:0.6;margin-top:6px;}
+
+/* ── STEPS ── */
+.steps{display:flex;flex-direction:column;gap:0;}
+.step-item{display:flex;gap:14px;padding:14px 0;border-bottom:1px solid var(--gray-100);}
+.step-item:last-child{border-bottom:none;}
+.step-num{width:28px;height:28px;border-radius:50%;background:var(--blue-light);color:var(--blue);font-size:0.8rem;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;}
+.step-num.done{background:var(--green-bg);color:var(--green);}
+.step-title{font-size:0.875rem;font-weight:600;color:var(--gray-800);margin-bottom:2px;}
+.step-desc{font-size:0.8rem;color:var(--gray-500);line-height:1.5;}
+
+/* ── PRICING PLANS ── */
+.plans-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-top:20px;}
+.plan-card{background:var(--white);border:2px solid var(--gray-200);border-radius:var(--r-lg);padding:24px;transition:all 200ms var(--ease);position:relative;}
+.plan-card:hover{border-color:var(--blue-mid);transform:translateY(-2px);box-shadow:var(--shadow-md);}
+.plan-card.featured{border-color:var(--blue);box-shadow:var(--shadow-md);}
+.plan-badge{position:absolute;top:-10px;left:50%;transform:translateX(-50%);background:var(--blue);color:var(--white);font-size:0.68rem;font-weight:700;padding:3px 10px;border-radius:100px;white-space:nowrap;}
+.plan-name{font-family:'Manrope',sans-serif;font-size:1rem;font-weight:700;color:var(--gray-900);margin-bottom:6px;}
+.plan-price{font-family:'Manrope',sans-serif;font-size:1.75rem;font-weight:800;color:var(--blue);line-height:1;}
+.plan-period{font-size:0.78rem;color:var(--gray-400);font-weight:400;}
+.plan-features{list-style:none;margin:16px 0;display:flex;flex-direction:column;gap:8px;}
+.plan-features li{font-size:0.8125rem;color:var(--gray-600);display:flex;align-items:flex-start;gap:7px;}
+.plan-features li::before{content:'✓';color:var(--green);font-weight:700;flex-shrink:0;}
+
+/* ── QR CODE ── */
+.qr-container{display:flex;flex-direction:column;align-items:center;gap:16px;}
+.qr-box{background:var(--white);border:2px solid var(--gray-200);border-radius:var(--r-lg);padding:20px;display:flex;align-items:center;justify-content:center;}
+.qr-label{font-size:0.78rem;color:var(--gray-500);text-align:center;max-width:200px;line-height:1.5;}
+.rider-card{background:var(--white);border:1px solid var(--gray-200);border-radius:var(--r-lg);padding:20px;display:flex;gap:16px;align-items:center;}
+.rider-avatar{width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,var(--blue),#4F46E5);color:var(--white);font-size:1.3rem;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.rider-info h3{font-family:'Manrope',sans-serif;font-weight:700;font-size:0.95rem;color:var(--gray-900);}
+.rider-info p{font-size:0.8rem;color:var(--gray-500);margin-top:2px;}
+
+/* ── STATUS ── */
+.status-banner{padding:14px 16px;border-radius:var(--r-md);display:flex;align-items:flex-start;gap:10px;margin-bottom:16px;}
+.status-banner.info{background:var(--blue-light);border:1px solid var(--blue-mid);}
+.status-banner.success{background:var(--green-bg);border:1px solid var(--green-light);}
+.status-banner.warning{background:var(--amber-bg);border:1px solid #FDE68A;}
+.status-icon{font-size:1.1rem;flex-shrink:0;margin-top:1px;}
+.status-text{font-size:0.875rem;}
+.status-text strong{display:block;font-weight:600;margin-bottom:2px;}
+
+/* ── DIVIDER ── */
+.divider{display:flex;align-items:center;gap:12px;margin:20px 0;color:var(--gray-400);font-size:0.8rem;}
+.divider::before,.divider::after{content:'';flex:1;height:1px;background:var(--gray-200);}
+
+/* ── BADGE ── */
+.badge{display:inline-flex;align-items:center;padding:3px 8px;border-radius:100px;font-size:0.72rem;font-weight:600;}
+.badge-green{background:var(--green-bg);color:var(--green);}
+.badge-blue{background:var(--blue-light);color:var(--blue);}
+.badge-amber{background:var(--amber-bg);color:var(--amber);}
+.badge-red{background:var(--red-bg);color:var(--red);}
+
+/* ── TRANSACTION LIST ── */
+.txn-list{display:flex;flex-direction:column;gap:0;}
+.txn-item{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--gray-100);}
+.txn-item:last-child{border-bottom:none;}
+.txn-icon{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0;}
+.txn-icon.credit{background:var(--green-bg);}
+.txn-icon.debit{background:var(--red-bg);}
+.txn-info{flex:1;}
+.txn-title{font-size:0.875rem;font-weight:600;color:var(--gray-900);}
+.txn-sub{font-size:0.75rem;color:var(--gray-500);}
+.txn-amount{font-family:'Manrope',sans-serif;font-weight:700;font-size:0.9rem;}
+.txn-amount.credit{color:var(--green);}
+.txn-amount.debit{color:var(--red);}
+
+/* ── TOAST ── */
+.toast{position:fixed;bottom:20px;right:20px;z-index:9999;background:var(--gray-900);color:var(--white);border-radius:var(--r-md);padding:12px 16px;display:flex;align-items:center;gap:10px;max-width:320px;box-shadow:var(--shadow-lg);transform:translateY(80px);opacity:0;transition:transform 300ms var(--ease-out),opacity 300ms;pointer-events:none;}
+.toast.show{transform:translateY(0);opacity:1;}
+.toast strong{display:block;font-weight:600;font-size:0.875rem;}
+.toast span{font-size:0.8rem;opacity:0.75;}
+
+/* ── MOBILE ── */
+.sb-toggle{display:none;position:fixed;top:12px;left:12px;z-index:200;background:var(--white);border:1px solid var(--gray-200);border-radius:var(--r-md);width:38px;height:38px;align-items:center;justify-content:center;font-size:1.1rem;box-shadow:var(--shadow-sm);}
+.sb-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.3);z-index:99;}
+@media(max-width:900px){
+  .sidebar{transform:translateX(-100%);}
+  .sidebar.open{transform:translateX(0);box-shadow:var(--shadow-lg);}
+  .sb-overlay.open{display:block;}
+  .sb-toggle{display:flex;}
+  .main{margin-left:0;padding:16px;padding-top:58px;}
+  .plans-grid{grid-template-columns:1fr;}
+  .field-row{grid-template-columns:1fr;}
+  .pay-methods{gap:6px;}
+  .pay-method-btn{flex:1;justify-content:center;padding:9px 12px;font-size:0.8rem;}
+}
+@media(max-width:520px){
+  .amount-value{font-size:1.75rem;}
+}
+</style>
+</head>
+<body>
+
+<div class="app">
+  <button class="sb-toggle" onclick="toggleSb()">☰</button>
+  <div class="sb-overlay" id="sbOverlay" onclick="toggleSb()"></div>
+
+  <!-- SIDEBAR -->
+  <div class="sidebar" id="sidebar">
+    <div class="sb-brand">
+      <div class="sb-logo">Chuka<span>Connect</span></div>
+      <div class="sb-sub">Payment & Monetization</div>
+    </div>
+    <div class="sb-nav">
+      <button class="nav-btn active" onclick="nav('pay-now',this)"><span class="ni">💳</span>Make a Payment</button>
+      <button class="nav-btn" onclick="nav('rider-qr',this)"><span class="ni">📱</span>Rider QR Code</button>
+      <p class="sb-section">Business</p>
+      <button class="nav-btn" onclick="nav('plans',this)"><span class="ni">📦</span>Listing Plans</button>
+      <button class="nav-btn" onclick="nav('subscribe',this)"><span class="ni">⭐</span>Subscribe / Upgrade</button>
+      <p class="sb-section">History</p>
+      <button class="nav-btn" onclick="nav('transactions',this)"><span class="ni">📋</span>Transactions</button>
+      <p class="sb-section">Info</p>
+      <button class="nav-btn" onclick="nav('how-it-works',this)"><span class="ni">❓</span>How Payments Work</button>
+    </div>
+  </div>
+
+  <!-- MAIN -->
+  <main class="main">
+
+    <!-- ══ PAY NOW ══ -->
+    <div id="pay-now" class="page active">
+      <div class="page-header">
+        <h1>Make a Payment</h1>
+        <p>Pay for orders, deliveries, hostel bookings and subscriptions.</p>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;max-width:860px">
+        <!-- LEFT: Payment form -->
+        <div>
+          <div class="card" style="margin-bottom:16px">
+            <div class="amount-display" id="amountDisplay">
+              <div class="amount-label">Amount to pay</div>
+              <div class="amount-value" id="displayAmount">KSh 0</div>
+              <div class="amount-desc" id="displayDesc">Enter amount below</div>
+            </div>
+
+            <div class="field">
+              <label class="field-label">Payment for</label>
+              <select class="field-input" id="payFor" onchange="updatePaymentDesc()">
+                <option value="order">Food / Grocery Order</option>
+                <option value="delivery">Boda Delivery Fee</option>
+                <option value="hostel">Hostel Booking Deposit</option>
+                <option value="subscription">Business Listing Subscription</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+
+            <div class="field-row">
+              <div class="field">
+                <label class="field-label">Amount (KSh)</label>
+                <input class="field-input" id="payAmount" type="number" placeholder="e.g. 450" oninput="updateAmount()">
+              </div>
+              <div class="field">
+                <label class="field-label">Recipient / Reference</label>
+                <input class="field-input" id="payRef" placeholder="e.g. Mama Achieng">
+              </div>
+            </div>
+          </div>
+
+          <!-- Payment method tabs -->
+          <div class="pay-methods">
+            <button class="pay-method-btn active-mpesa" onclick="switchMethod('mpesa',this)" id="btn-mpesa">
+              <span>📱</span> M-Pesa
+            </button>
+            <button class="pay-method-btn" onclick="switchMethod('airtel',this)" id="btn-airtel">
+              <span>📡</span> Airtel
+            </button>
+            <button class="pay-method-btn" onclick="switchMethod('bank',this)" id="btn-bank">
+              <span>🏦</span> Bank
+            </button>
+          </div>
+
+          <!-- M-PESA PANEL -->
+          <div id="panel-mpesa" class="pay-panel active card">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;padding-bottom:14px;border-bottom:1px solid var(--gray-100)">
+              <div style="width:36px;height:36px;background:var(--mpesa);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0">📱</div>
+              <div>
+                <div style="font-weight:700;font-size:0.9rem">Safaricom M-Pesa</div>
+                <div style="font-size:0.75rem;color:var(--gray-500)">STK Push to your phone</div>
+              </div>
+              <span class="badge badge-green" style="margin-left:auto">Recommended</span>
+            </div>
+
+            <div class="field">
+              <label class="field-label">M-Pesa Phone Number</label>
+              <input class="field-input" id="mpesa-phone" type="tel" placeholder="0712 345 678" maxlength="12">
+              <div class="field-hint">Must be a registered Safaricom number</div>
+            </div>
+
+            <div class="steps" style="margin-bottom:20px">
+              <div class="step-item">
+                <div class="step-num" id="mp-step1">1</div>
+                <div><div class="step-title">Enter your M-Pesa number</div><div class="step-desc">The number that will receive the payment prompt</div></div>
+              </div>
+              <div class="step-item">
+                <div class="step-num" id="mp-step2">2</div>
+                <div><div class="step-title">Click "Send M-Pesa Prompt"</div><div class="step-desc">A push notification is sent to your phone</div></div>
+              </div>
+              <div class="step-item">
+                <div class="step-num" id="mp-step3">3</div>
+                <div><div class="step-title">Enter your M-Pesa PIN</div><div class="step-desc">Confirm the payment on your phone</div></div>
+              </div>
+            </div>
+
+            <button class="btn btn-mpesa btn-full" id="mpesa-btn" onclick="payMpesa()">
+              📱 Send M-Pesa Prompt
+            </button>
+            <p style="font-size:0.72rem;color:var(--gray-400);text-align:center;margin-top:8px">
+              Standard Safaricom transaction charges apply
+            </p>
+          </div>
+
+          <!-- AIRTEL PANEL -->
+          <div id="panel-airtel" class="pay-panel card">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;padding-bottom:14px;border-bottom:1px solid var(--gray-100)">
+              <div style="width:36px;height:36px;background:var(--airtel);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1rem">📡</div>
+              <div>
+                <div style="font-weight:700;font-size:0.9rem">Airtel Money</div>
+                <div style="font-size:0.75rem;color:var(--gray-500)">Pay with Airtel Money</div>
+              </div>
+            </div>
+
+            <div class="field">
+              <label class="field-label">Airtel Phone Number</label>
+              <input class="field-input" id="airtel-phone" type="tel" placeholder="0733 345 678">
+              <div class="field-hint">Must be a registered Airtel number</div>
+            </div>
+
+            <div class="status-banner info" style="margin-bottom:16px">
+              <span class="status-icon">ℹ️</span>
+              <div class="status-text">
+                <strong>Airtel Money Integration</strong>
+                Airtel Money uses USSD *334# for payments. You will be prompted to confirm via USSD on your phone.
+              </div>
+            </div>
+
+            <button class="btn btn-airtel btn-full" id="airtel-btn" onclick="payAirtel()">
+              📡 Send Airtel Money Prompt
+            </button>
+
+            <div class="divider">or pay manually via USSD</div>
+
+            <div class="card-flat">
+              <div style="font-size:0.8125rem;font-weight:600;color:var(--gray-700);margin-bottom:8px">Manual Airtel Money Steps</div>
+              <div style="font-size:0.8125rem;color:var(--gray-600);line-height:1.8">
+                1. Dial <strong>*334#</strong> on your Airtel phone<br>
+                2. Select <strong>"Send Money"</strong><br>
+                3. Enter number: <strong id="airtel-manual-num">—</strong><br>
+                4. Enter amount: <strong id="airtel-manual-amt">KSh —</strong><br>
+                5. Enter your PIN to confirm
+              </div>
+            </div>
+          </div>
+
+          <!-- BANK PANEL -->
+          <div id="panel-bank" class="pay-panel card">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;padding-bottom:14px;border-bottom:1px solid var(--gray-100)">
+              <div style="width:36px;height:36px;background:var(--bank);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1rem">🏦</div>
+              <div>
+                <div style="font-weight:700;font-size:0.9rem">Bank Transfer</div>
+                <div style="font-size:0.75rem;color:var(--gray-500)">EFT, RTGS or Mobile Banking</div>
+              </div>
+            </div>
+
+            <div class="status-banner info" style="margin-bottom:16px">
+              <span class="status-icon">ℹ️</span>
+              <div class="status-text"><strong>Bank transfer details</strong>Use the account details below to transfer from any Kenyan bank or mobile banking app.</div>
+            </div>
+
+            <div class="card-flat" style="margin-bottom:14px">
+              <div style="display:grid;gap:10px;font-size:0.8125rem">
+                <div style="display:flex;justify-content:space-between">
+                  <span style="color:var(--gray-500)">Bank Name</span>
+                  <strong>Equity Bank Kenya</strong>
+                </div>
+                <div style="display:flex;justify-content:space-between">
+                  <span style="color:var(--gray-500)">Account Name</span>
+                  <strong>ChukaConnect Ltd</strong>
+                </div>
+                <div style="display:flex;justify-content:space-between">
+                  <span style="color:var(--gray-500)">Account Number</span>
+                  <strong style="font-family:monospace">0123456789</strong>
+                </div>
+                <div style="display:flex;justify-content:space-between">
+                  <span style="color:var(--gray-500)">Branch Code</span>
+                  <strong>068</strong>
+                </div>
+                <div style="display:flex;justify-content:space-between">
+                  <span style="color:var(--gray-500)">Swift Code</span>
+                  <strong>EQBLKENA</strong>
+                </div>
+                <div style="display:flex;justify-content:space-between;padding-top:8px;border-top:1px solid var(--gray-200)">
+                  <span style="color:var(--gray-500)">Reference</span>
+                  <strong id="bank-ref" style="color:var(--blue)">CC-STUDENT</strong>
+                </div>
+                <div style="display:flex;justify-content:space-between">
+                  <span style="color:var(--gray-500)">Amount</span>
+                  <strong id="bank-amount" style="color:var(--blue)">KSh —</strong>
+                </div>
+              </div>
+            </div>
+
+            <div class="field">
+              <label class="field-label">Your name (for confirmation)</label>
+              <input class="field-input" id="bank-name" placeholder="Full name as on your bank account">
+            </div>
+
+            <button class="btn btn-bank btn-full" id="bank-btn" onclick="confirmBank()">
+              🏦 Confirm Bank Transfer
+            </button>
+            <p style="font-size:0.72rem;color:var(--gray-400);text-align:center;margin-top:8px">
+              Bank transfers may take 1-3 business days to reflect
+            </p>
+          </div>
+        </div>
+
+        <!-- RIGHT: Summary + History -->
+        <div>
+          <div class="card" style="margin-bottom:16px">
+            <div style="font-family:'Manrope',sans-serif;font-weight:700;font-size:0.95rem;margin-bottom:14px;color:var(--gray-900)">Payment Summary</div>
+            <div style="display:flex;flex-direction:column;gap:8px;font-size:0.875rem;margin-bottom:16px">
+              <div style="display:flex;justify-content:space-between">
+                <span style="color:var(--gray-500)">Service</span>
+                <span id="sum-service" style="font-weight:500">—</span>
+              </div>
+              <div style="display:flex;justify-content:space-between">
+                <span style="color:var(--gray-500)">Amount</span>
+                <span id="sum-amount" style="font-weight:500">KSh —</span>
+              </div>
+              <div style="display:flex;justify-content:space-between">
+                <span style="color:var(--gray-500)">Platform fee</span>
+                <span style="color:var(--green);font-weight:500">Free</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;padding-top:10px;border-top:1px solid var(--gray-200)">
+                <span style="font-weight:700">Total</span>
+                <span id="sum-total" style="font-weight:700;color:var(--blue)">KSh —</span>
+              </div>
+            </div>
+            <div style="background:var(--green-bg);border-radius:8px;padding:10px 12px;font-size:0.78rem;color:var(--green);font-weight:500">
+              ✓ No extra charges on ChukaConnect
+            </div>
+          </div>
+
+          <div class="card">
+            <div style="font-family:'Manrope',sans-serif;font-weight:700;font-size:0.95rem;margin-bottom:14px">Recent Payments</div>
+            <div id="recent-txns" class="txn-list">
+              <div style="text-align:center;padding:20px;color:var(--gray-400);font-size:0.85rem">No recent payments yet</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ RIDER QR CODE ══ -->
+    <div id="rider-qr" class="page">
+      <div class="page-header">
+        <h1>Rider Payment QR Code</h1>
+        <p>Generate a QR code for students and businesses to scan and pay you instantly.</p>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;max-width:860px">
+        <!-- QR Generator -->
+        <div>
+          <div class="card">
+            <div style="font-family:'Manrope',sans-serif;font-weight:700;margin-bottom:16px">Your Rider Details</div>
+
+            <div class="field">
+              <label class="field-label">Your Full Name</label>
+              <input class="field-input" id="qr-name" placeholder="e.g. James Mwangi" oninput="updateQR()">
+            </div>
+            <div class="field">
+              <label class="field-label">M-Pesa Phone Number</label>
+              <input class="field-input" id="qr-phone" type="tel" placeholder="0712 345 678" oninput="updateQR()">
+              <div class="field-hint">Students will send money to this number</div>
+            </div>
+            <div class="field-row">
+              <div class="field">
+                <label class="field-label">Bike Registration</label>
+                <input class="field-input" id="qr-bike" placeholder="KMZB 001A" oninput="updateQR()">
+              </div>
+              <div class="field">
+                <label class="field-label">Default Fare (KSh)</label>
+                <input class="field-input" id="qr-fare" type="number" placeholder="50" oninput="updateQR()">
+              </div>
+            </div>
+            <div class="field">
+              <label class="field-label">Operating Area</label>
+              <input class="field-input" id="qr-area" placeholder="e.g. Chuka Campus — Town" oninput="updateQR()">
+            </div>
+
+            <button class="btn btn-primary btn-full" onclick="generateQR()">
+              Generate My QR Code
+            </button>
+          </div>
+        </div>
+
+        <!-- QR Preview -->
+        <div>
+          <div class="card" style="text-align:center">
+            <div style="font-family:'Manrope',sans-serif;font-weight:700;margin-bottom:4px">Your Payment QR Code</div>
+            <div style="font-size:0.8rem;color:var(--gray-500);margin-bottom:20px">Students scan this to pay you</div>
+
+            <div id="qr-preview-card" style="display:none">
+              <div class="rider-card" style="margin-bottom:16px;text-align:left">
+                <div class="rider-avatar" id="qr-avatar">J</div>
+                <div class="rider-info">
+                  <h3 id="qr-display-name">Rider Name</h3>
+                  <p id="qr-display-phone">Phone: —</p>
+                  <p id="qr-display-area">Area: —</p>
+                </div>
+              </div>
+
+              <div class="qr-box" style="margin-bottom:12px">
+                <div id="qrcode"></div>
+              </div>
+
+              <div class="qr-label" style="margin-bottom:16px">
+                Scan with any camera app or M-Pesa to pay this rider instantly
+              </div>
+
+              <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
+                <button class="btn btn-primary btn-sm" onclick="printQR()">🖨️ Print QR</button>
+                <button class="btn btn-secondary btn-sm" onclick="downloadQR()">⬇️ Download</button>
+                <button class="btn btn-secondary btn-sm" onclick="shareQR()">📤 Share</button>
+              </div>
+            </div>
+
+            <div id="qr-placeholder" style="padding:40px 20px">
+              <div style="font-size:4rem;margin-bottom:12px;opacity:0.3">📱</div>
+              <div style="font-size:0.875rem;color:var(--gray-400)">Fill in your details on the left and click Generate</div>
+            </div>
+          </div>
+
+          <!-- How to use QR -->
+          <div class="card" style="margin-top:16px">
+            <div style="font-family:'Manrope',sans-serif;font-weight:700;font-size:0.9rem;margin-bottom:12px">How to use your QR Code</div>
+            <div class="steps">
+              <div class="step-item">
+                <div class="step-num">1</div>
+                <div><div class="step-title">Generate and print your QR code</div><div class="step-desc">Print it on paper or a card and keep it with you</div></div>
+              </div>
+              <div class="step-item">
+                <div class="step-num">2</div>
+                <div><div class="step-title">Show it to the customer</div><div class="step-desc">When the ride or delivery is complete, show your QR code</div></div>
+              </div>
+              <div class="step-item">
+                <div class="step-num">3</div>
+                <div><div class="step-title">Customer scans and pays</div><div class="step-desc">They scan with M-Pesa app or camera and send payment directly to your phone</div></div>
+              </div>
+              <div class="step-item">
+                <div class="step-num done">✓</div>
+                <div><div class="step-title">Receive M-Pesa confirmation</div><div class="step-desc">You get an SMS instantly when payment is received</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ PLANS ══ -->
+    <div id="plans" class="page">
+      <div class="page-header">
+        <h1>Business Listing Plans</h1>
+        <p>Choose a plan that works for your business. All plans include a 3-month free trial.</p>
+      </div>
+
+      <div class="status-banner info" style="max-width:640px;margin-bottom:24px">
+        <span class="status-icon">🎁</span>
+        <div class="status-text">
+          <strong>Free for your first 3 months</strong>
+          All new businesses get 3 months free on any plan. No payment required to start.
+        </div>
+      </div>
+
+      <div class="plans-grid" style="max-width:900px">
+        <div class="plan-card">
+          <div class="plan-name">Basic</div>
+          <div class="plan-price">KSh 200 <span class="plan-period">/ month</span></div>
+          <ul class="plan-features">
+            <li>Listed in search results</li>
+            <li>Phone number visible</li>
+            <li>Category badge</li>
+            <li>Up to 1 listing</li>
+          </ul>
+          <button class="btn btn-secondary btn-full" onclick="selectPlan('Basic','200')">Select Basic</button>
+        </div>
+
+        <div class="plan-card featured">
+          <div class="plan-badge">Most Popular</div>
+          <div class="plan-name">Standard</div>
+          <div class="plan-price">KSh 500 <span class="plan-period">/ month</span></div>
+          <ul class="plan-features">
+            <li>Everything in Basic</li>
+            <li>Business photo shown</li>
+            <li>Delivery badge</li>
+            <li>Up to 3 listings</li>
+            <li>Contact button for students</li>
+          </ul>
+          <button class="btn btn-primary btn-full" onclick="selectPlan('Standard','500')">Select Standard</button>
+        </div>
+
+        <div class="plan-card">
+          <div class="plan-name">Premium</div>
+          <div class="plan-price">KSh 1,000 <span class="plan-period">/ month</span></div>
+          <ul class="plan-features">
+            <li>Everything in Standard</li>
+            <li>Featured at top of results</li>
+            <li>Unlimited listings</li>
+            <li>Featured badge on cards</li>
+            <li>Priority admin approval</li>
+            <li>Monthly visitor stats</li>
+          </ul>
+          <button class="btn btn-primary btn-full" style="background:linear-gradient(135deg,var(--blue),#4F46E5)" onclick="selectPlan('Premium','1000')">Select Premium</button>
+        </div>
+      </div>
+
+      <div class="card" style="max-width:640px;margin-top:24px">
+        <div style="font-family:'Manrope',sans-serif;font-weight:700;margin-bottom:12px">Commission on Deliveries</div>
+        <p style="font-size:0.875rem;color:var(--gray-600);line-height:1.7;margin-bottom:12px">
+          When a student places a delivery order through ChukaConnect, a small platform fee applies. This goes towards maintaining the platform and is deducted automatically from each transaction.
+        </p>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;text-align:center">
+          <div style="background:var(--gray-50);border-radius:8px;padding:12px">
+            <div style="font-size:1.2rem;font-weight:800;color:var(--gray-900)">90%</div>
+            <div style="font-size:0.75rem;color:var(--gray-500)">Rider earns</div>
+          </div>
+          <div style="background:var(--blue-light);border-radius:8px;padding:12px">
+            <div style="font-size:1.2rem;font-weight:800;color:var(--blue)">10%</div>
+            <div style="font-size:0.75rem;color:var(--gray-500)">Platform fee</div>
+          </div>
+          <div style="background:var(--green-bg);border-radius:8px;padding:12px">
+            <div style="font-size:1.2rem;font-weight:800;color:var(--green)">0%</div>
+            <div style="font-size:0.75rem;color:var(--gray-500)">Student surcharge</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ SUBSCRIBE ══ -->
+    <div id="subscribe" class="page">
+      <div class="page-header">
+        <h1>Subscribe / Upgrade</h1>
+        <p>Pay your listing subscription via M-Pesa, Airtel or Bank Transfer.</p>
+      </div>
+
+      <div style="max-width:520px">
+        <div class="card">
+          <div class="field">
+            <label class="field-label">Selected Plan</label>
+            <select class="field-input" id="sub-plan" onchange="updateSubAmount()">
+              <option value="200">Basic — KSh 200/month</option>
+              <option value="500" selected>Standard — KSh 500/month</option>
+              <option value="1000">Premium — KSh 1,000/month</option>
+              <option value="2400">Basic Annual — KSh 2,400/year (save 20%)</option>
+              <option value="5400">Standard Annual — KSh 5,400/year (save 10%)</option>
+              <option value="10800">Premium Annual — KSh 10,800/year (save 10%)</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label class="field-label">Business Name</label>
+            <input class="field-input" id="sub-bizname" placeholder="Your registered business name">
+          </div>
+
+          <div class="amount-display" id="sub-amount-display" style="margin-bottom:20px">
+            <div class="amount-label">Subscription amount</div>
+            <div class="amount-value" id="sub-display-amt">KSh 500</div>
+            <div class="amount-desc">Standard Plan · Monthly</div>
+          </div>
+
+          <div style="font-family:'Manrope',sans-serif;font-weight:700;font-size:0.9rem;margin-bottom:12px">Pay via</div>
+
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <button class="btn btn-mpesa btn-full" onclick="paySub('mpesa')">
+              📱 Pay with M-Pesa
+            </button>
+            <button class="btn btn-airtel btn-full" onclick="paySub('airtel')">
+              📡 Pay with Airtel Money
+            </button>
+            <button class="btn btn-bank btn-full" onclick="paySub('bank')">
+              🏦 Pay via Bank Transfer
+            </button>
+          </div>
+
+          <p style="font-size:0.75rem;color:var(--gray-400);text-align:center;margin-top:12px">
+            After payment, your listing will be activated within 2 hours
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ TRANSACTIONS ══ -->
+    <div id="transactions" class="page">
+      <div class="page-header">
+        <h1>Transaction History</h1>
+        <p>All your payments and receipts on ChukaConnect.</p>
+      </div>
+
+      <div class="card" style="max-width:640px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+          <div style="font-family:'Manrope',sans-serif;font-weight:700">Recent Transactions</div>
+          <span class="badge badge-green">Payments are secure</span>
+        </div>
+        <div class="txn-list" id="txn-history">
+          <!-- Demo transactions -->
+          <div class="txn-item">
+            <div class="txn-icon credit">✅</div>
+            <div class="txn-info">
+              <div class="txn-title">M-Pesa Payment Received</div>
+              <div class="txn-sub">Food order · Mama Achieng Kitchen · Today 2:30 PM</div>
+            </div>
+            <div class="txn-amount credit">+KSh 350</div>
+          </div>
+          <div class="txn-item">
+            <div class="txn-icon debit">💳</div>
+            <div class="txn-info">
+              <div class="txn-title">Listing Subscription</div>
+              <div class="txn-sub">Standard Plan · Monthly · Mar 2026</div>
+            </div>
+            <div class="txn-amount debit">-KSh 500</div>
+          </div>
+          <div class="txn-item">
+            <div class="txn-icon credit">✅</div>
+            <div class="txn-info">
+              <div class="txn-title">Boda Delivery Payment</div>
+              <div class="txn-sub">QR Code scan · James M. · Today 11:15 AM</div>
+            </div>
+            <div class="txn-amount credit">+KSh 80</div>
+          </div>
+          <div class="txn-item">
+            <div class="txn-icon debit">💳</div>
+            <div class="txn-info">
+              <div class="txn-title">Hostel Booking Deposit</div>
+              <div class="txn-sub">Greenview Hostels · M-Pesa · Mar 14</div>
+            </div>
+            <div class="txn-amount debit">-KSh 2,000</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ HOW IT WORKS ══ -->
+    <div id="how-it-works" class="page">
+      <div class="page-header">
+        <h1>How Payments Work</h1>
+        <p>A simple guide to all payment methods on ChukaConnect.</p>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;max-width:860px">
+        <div class="card">
+          <div style="font-size:1.5rem;margin-bottom:10px">📱</div>
+          <div style="font-family:'Manrope',sans-serif;font-weight:700;margin-bottom:8px">M-Pesa STK Push</div>
+          <p style="font-size:0.875rem;color:var(--gray-600);line-height:1.7;margin-bottom:12px">The most common method. You enter your phone number and an automatic prompt is sent to your phone. Enter your PIN to confirm. Payment reflects instantly.</p>
+          <span class="badge badge-green">Instant · Recommended</span>
+        </div>
+
+        <div class="card">
+          <div style="font-size:1.5rem;margin-bottom:10px">📡</div>
+          <div style="font-family:'Manrope',sans-serif;font-weight:700;margin-bottom:8px">Airtel Money</div>
+          <p style="font-size:0.875rem;color:var(--gray-600);line-height:1.7;margin-bottom:12px">For Airtel subscribers. You receive a USSD prompt on your phone to confirm payment. Can also pay manually via *334#.</p>
+          <span class="badge badge-blue">Instant · Airtel numbers</span>
+        </div>
+
+        <div class="card">
+          <div style="font-size:1.5rem;margin-bottom:10px">🏦</div>
+          <div style="font-family:'Manrope',sans-serif;font-weight:700;margin-bottom:8px">Bank Transfer</div>
+          <p style="font-size:0.875rem;color:var(--gray-600);line-height:1.7;margin-bottom:12px">For larger payments like hostel deposits. Transfer from any Kenyan bank or mobile banking app. Takes 1-3 business days.</p>
+          <span class="badge badge-amber">1-3 days · Large amounts</span>
+        </div>
+
+        <div class="card">
+          <div style="font-size:1.5rem;margin-bottom:10px">📱</div>
+          <div style="font-family:'Manrope',sans-serif;font-weight:700;margin-bottom:8px">QR Code (Riders)</div>
+          <p style="font-size:0.875rem;color:var(--gray-600);line-height:1.7;margin-bottom:12px">Boda riders generate a personal QR code. Customers scan it with M-Pesa app to pay instantly. No cash needed.</p>
+          <span class="badge badge-green">Instant · No cash needed</span>
+        </div>
+      </div>
+
+      <div class="card" style="max-width:640px;margin-top:20px">
+        <div style="font-family:'Manrope',sans-serif;font-weight:700;margin-bottom:12px">To integrate real M-Pesa payments</div>
+        <div class="steps">
+          <div class="step-item">
+            <div class="step-num">1</div>
+            <div><div class="step-title">Register on Safaricom Daraja</div><div class="step-desc">Go to developer.safaricom.co.ke and create a free account</div></div>
+          </div>
+          <div class="step-item">
+            <div class="step-num">2</div>
+            <div><div class="step-title">Get a Paybill / Till Number</div><div class="step-desc">Register an M-Pesa business account at any Safaricom shop</div></div>
+          </div>
+          <div class="step-item">
+            <div class="step-num">3</div>
+            <div><div class="step-title">Set up a backend server</div><div class="step-desc">Deploy a free Node.js server on Render.com to handle Daraja API calls</div></div>
+          </div>
+          <div class="step-item">
+            <div class="step-num done">✓</div>
+            <div><div class="step-title">Connect to ChukaConnect</div><div class="step-desc">Add your backend URL to the payment buttons in your site</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast">
+  <span id="t_icon" style="font-size:1.1rem"></span>
+  <div><strong id="t_title"></strong><span id="t_body"></span></div>
+</div>
+
+<script>
+'use strict';
+
+// ── BACKEND URL ─────────────────────────
+const BACKEND = 'https://chukaconnect-backend-s6bi.onrender.com';
+
+// ── NAV ──
+function nav(pageId, btn) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById(pageId).classList.add('active');
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('sbOverlay').classList.remove('open');
+  window.scrollTo({ top:0, behavior:'smooth' });
+}
+
+function toggleSb() {
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('sbOverlay').classList.toggle('open');
+}
+
+// ── TOAST ──
+function toast(icon, title, body, isErr) {
+  document.getElementById('t_icon').textContent = icon;
+  document.getElementById('t_title').textContent = title;
+  document.getElementById('t_body').textContent = body ? ' — ' + body : '';
+  const t = document.getElementById('toast');
+  t.style.borderLeft = isErr ? '3px solid #DC2626' : '3px solid #16A34A';
+  t.classList.add('show');
+  clearTimeout(t._t);
+  t._t = setTimeout(() => t.classList.remove('show'), 4500);
+}
+
+// ── PAYMENT METHOD SWITCH ──
+let currentMethod = 'mpesa';
+function switchMethod(method, btn) {
+  currentMethod = method;
+  document.querySelectorAll('.pay-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('panel-' + method).classList.add('active');
+  document.querySelectorAll('.pay-method-btn').forEach(b => {
+    b.className = 'pay-method-btn';
+  });
+  btn.classList.add('active-' + method);
+}
+
+// ── AMOUNT UPDATE ──
+function updateAmount() {
+  const amt = document.getElementById('payAmount').value;
+  const ref = document.getElementById('payRef').value || '—';
+  document.getElementById('displayAmount').textContent = amt ? 'KSh ' + Number(amt).toLocaleString() : 'KSh 0';
+  document.getElementById('sum-amount').textContent = amt ? 'KSh ' + Number(amt).toLocaleString() : 'KSh —';
+  document.getElementById('sum-total').textContent = amt ? 'KSh ' + Number(amt).toLocaleString() : 'KSh —';
+  document.getElementById('bank-amount').textContent = amt ? 'KSh ' + Number(amt).toLocaleString() : 'KSh —';
+  document.getElementById('airtel-manual-amt').textContent = amt ? 'KSh ' + Number(amt) : 'KSh —';
+  updatePaymentDesc();
+}
+
+function updatePaymentDesc() {
+  const payFor = document.getElementById('payFor').value;
+  const labels = { order:'Food / Grocery Order', delivery:'Boda Delivery Fee', hostel:'Hostel Booking Deposit', subscription:'Business Subscription', other:'Payment' };
+  const desc = labels[payFor] || 'Payment';
+  document.getElementById('displayDesc').textContent = desc;
+  document.getElementById('sum-service').textContent = desc;
+  document.getElementById('bank-ref').textContent = 'CC-' + desc.toUpperCase().replace(/ /g,'-').substring(0,12);
+}
+
+// ── M-PESA PAYMENT ──
+async function payMpesa() {
+  const phone  = document.getElementById('mpesa-phone').value.trim();
+  const amount = document.getElementById('payAmount').value;
+  const ref    = document.getElementById('payRef').value.trim() || 'ChukaConnect';
+  const desc   = document.getElementById('payFor').value || 'Payment';
+
+  if (!phone || phone.length < 9) { toast('⚠️','Phone required','Enter your M-Pesa number.',true); return; }
+  if (!amount || amount <= 0)     { toast('⚠️','Amount required','Enter the payment amount.',true); return; }
+
+  const btn = document.getElementById('mpesa-btn');
+  btn.classList.add('btn-loading'); btn.disabled = true;
+
+  // Step 1 — sending request
+  document.getElementById('mp-step1').classList.add('done');
+  document.getElementById('mp-step1').textContent = '✓';
+
+  try {
+    const res = await fetch(`${BACKEND}/api/mpesa/stk-push`, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone, amount: Number(amount), description: desc, reference: ref })
+    });
+
+    const data = await res.json();
+
+    if (!data.success) {
+      throw new Error(data.message || 'Payment request failed.');
+    }
+
+    // Step 2 — prompt sent
+    document.getElementById('mp-step2').classList.add('done');
+    document.getElementById('mp-step2').textContent = '✓';
+
+    toast('📱', 'M-Pesa Prompt Sent', `Check ${phone} — enter your PIN to confirm.`);
+    addTransaction('debit', 'M-Pesa Payment', `${desc} · ${ref}`, amount);
+
+    // Step 3 — poll for confirmation every 5 seconds
+    const checkoutId = data.checkoutRequestId;
+    let attempts = 0;
+    const poll = setInterval(async () => {
+      attempts++;
+      if (attempts > 6) { // stop after 30 seconds
+        clearInterval(poll);
+        btn.classList.remove('btn-loading'); btn.disabled = false;
+        toast('⏱️', 'Payment Pending', 'Did not confirm in time. Check your M-Pesa messages.');
+        return;
+      }
+      try {
+        const qRes  = await fetch(`${BACKEND}/api/mpesa/stk-query`, {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ checkoutRequestId: checkoutId })
+        });
+        const qData = await qRes.json();
+        if (qData.paid) {
+          clearInterval(poll);
+          document.getElementById('mp-step3').classList.add('done');
+          document.getElementById('mp-step3').textContent = '✓';
+          btn.classList.remove('btn-loading'); btn.disabled = false;
+          toast('✅', 'Payment Confirmed!', `KSh ${Number(amount).toLocaleString()} received successfully.`);
+        }
+      } catch(e) { /* keep polling */ }
+    }, 5000);
+
+  } catch(err) {
+    btn.classList.remove('btn-loading'); btn.disabled = false;
+    toast('❌', 'Payment Failed', err.message, true);
+    console.error('M-Pesa error:', err);
+  }
+}
+
+// ── AIRTEL PAYMENT ──
+async function payAirtel() {
+  const phone = document.getElementById('airtel-phone').value.trim();
+  const amount = document.getElementById('payAmount').value;
+  if (!phone) { toast('⚠️','Phone required','Enter your Airtel number.',true); return; }
+  if (!amount || amount <= 0) { toast('⚠️','Amount required','Enter the payment amount.',true); return; }
+
+  const btn = document.getElementById('airtel-btn');
+  btn.classList.add('btn-loading'); btn.disabled = true;
+  document.getElementById('airtel-manual-num').textContent = phone;
+
+  await delay(2000);
+  btn.classList.remove('btn-loading'); btn.disabled = false;
+  toast('📡', 'Airtel Prompt Sent', `Check your phone (${phone}) for the USSD prompt.`);
+  addTransaction('credit', 'Airtel Money Payment', `To ${document.getElementById('payRef').value||'recipient'}`, amount);
+}
+
+// ── BANK CONFIRM ──
+async function confirmBank() {
+  const name = document.getElementById('bank-name').value.trim();
+  const amount = document.getElementById('payAmount').value;
+  if (!name) { toast('⚠️','Name required','Enter your name for confirmation.',true); return; }
+  if (!amount) { toast('⚠️','Amount required','Enter the amount.',true); return; }
+  const btn = document.getElementById('bank-btn');
+  btn.classList.add('btn-loading'); btn.disabled = true;
+  await delay(1500);
+  btn.classList.remove('btn-loading'); btn.disabled = false;
+  toast('🏦', 'Bank Transfer Registered', 'We will confirm receipt within 1-3 business days.');
+  addTransaction('debit', 'Bank Transfer', `Reference: ${document.getElementById('bank-ref').textContent}`, amount);
+}
+
+// ── SUBSCRIPTION PAYMENT ──
+async function paySub(method) {
+  const bizname = document.getElementById('sub-bizname').value.trim();
+  const amount  = document.getElementById('sub-plan').value;
+  if (!bizname) { toast('⚠️','Business name required','Enter your business name.',true); return; }
+
+  const methodLabels = { mpesa:'M-Pesa', airtel:'Airtel Money', bank:'Bank Transfer' };
+
+  if (method === 'mpesa') {
+    // Prompt user for their phone number
+    const phone = prompt('Enter your M-Pesa phone number for the subscription payment:');
+    if (!phone) return;
+    toast('💳','Processing...', `Sending KSh ${Number(amount).toLocaleString()} M-Pesa prompt...`);
+    try {
+      const res  = await fetch(`${BACKEND}/api/mpesa/stk-push`, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          phone, amount: Number(amount),
+          description: 'ChukaConnect Sub',
+          reference:   bizname.substring(0,12)
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast('📱','M-Pesa Prompt Sent', `Check ${phone} — enter PIN to activate subscription.`);
+        addTransaction('debit','Listing Subscription', `${bizname} · M-Pesa`, amount);
+      } else {
+        toast('❌','Payment Failed', data.message, true);
+      }
+    } catch(e) {
+      toast('❌','Error', e.message, true);
+    }
+  } else {
+    toast('💳', 'Subscription Payment', `Processing KSh ${Number(amount).toLocaleString()} via ${methodLabels[method]}...`);
+    await delay(1500);
+    toast('✅', 'Request Received', `Complete payment via ${methodLabels[method]} to activate.`);
+    addTransaction('debit','Listing Subscription', `${bizname} · ${methodLabels[method]}`, amount);
+  }
+}
+
+// ── PLAN SELECT ──
+function selectPlan(name, price) {
+  nav('subscribe', document.querySelectorAll('.nav-btn')[3]);
+  document.getElementById('sub-bizname').focus();
+  const options = document.getElementById('sub-plan').options;
+  for (let i = 0; i < options.length; i++) {
+    if (options[i].value === price) { document.getElementById('sub-plan').selectedIndex = i; break; }
+  }
+  updateSubAmount();
+  toast('📦', name + ' Plan Selected', 'Fill in your details and pay to activate.');
+}
+
+function updateSubAmount() {
+  const val = document.getElementById('sub-plan').value;
+  const labels = {'200':'Basic · Monthly','500':'Standard · Monthly','1000':'Premium · Monthly','2400':'Basic · Annual','5400':'Standard · Annual','10800':'Premium · Annual'};
+  document.getElementById('sub-display-amt').textContent = 'KSh ' + Number(val).toLocaleString();
+  document.getElementById('sub-amount-display').querySelector('.amount-desc').textContent = labels[val] || '';
+}
+
+// ── QR CODE ──
+let qrInstance = null;
+function generateQR() {
+  const name  = document.getElementById('qr-name').value.trim();
+  const phone = document.getElementById('qr-phone').value.trim();
+  const bike  = document.getElementById('qr-bike').value.trim();
+  const fare  = document.getElementById('qr-fare').value;
+  const area  = document.getElementById('qr-area').value.trim();
+
+  if (!name || !phone) { toast('⚠️','Required','Name and phone number are required.',true); return; }
+
+  // Build M-Pesa payment URL (Safaricom format)
+  const mpesaUrl = `https://mpesa.safaricom.co.ke/payment/${phone}`;
+  const qrData = JSON.stringify({
+    platform: 'ChukaConnect',
+    type: 'boda_rider',
+    name, phone, bike, fare: fare||'Negotiable', area,
+    payment: mpesaUrl
+  });
+
+  // Show preview card
+  document.getElementById('qr-preview-card').style.display = 'block';
+  document.getElementById('qr-placeholder').style.display = 'none';
+  document.getElementById('qr-avatar').textContent = name[0].toUpperCase();
+  document.getElementById('qr-display-name').textContent = name;
+  document.getElementById('qr-display-phone').textContent = 'M-Pesa: ' + phone;
+  document.getElementById('qr-display-area').textContent = area || 'Chuka Area';
+
+  // Generate QR
+  const qrEl = document.getElementById('qrcode');
+  qrEl.innerHTML = '';
+  qrInstance = new QRCode(qrEl, {
+    text: qrData,
+    width: 180, height: 180,
+    colorDark: '#111827', colorLight: '#FFFFFF',
+    correctLevel: QRCode.CorrectLevel.H
+  });
+
+  toast('✅', 'QR Code Generated', 'Print or download your QR code.');
+}
+
+function updateQR() {
+  const name  = document.getElementById('qr-name').value;
+  const phone = document.getElementById('qr-phone').value;
+  if (name) document.getElementById('qr-display-name').textContent = name;
+  if (phone) document.getElementById('qr-display-phone').textContent = 'M-Pesa: ' + phone;
+  if (name) document.getElementById('qr-avatar').textContent = name[0].toUpperCase();
+}
+
+function printQR() {
+  const name  = document.getElementById('qr-name').value || 'Rider';
+  const phone = document.getElementById('qr-phone').value || '';
+  const area  = document.getElementById('qr-area').value || 'Chuka Area';
+  const qrCanvas = document.querySelector('#qrcode canvas');
+  if (!qrCanvas) { toast('⚠️','Generate first','Click "Generate My QR Code" first.',true); return; }
+  const w = window.open('');
+  w.document.write(`
+    <!DOCTYPE html><html><head><title>ChukaConnect Rider QR</title>
+    <style>
+      body{font-family:Inter,sans-serif;display:flex;justify-content:center;align-items:center;min-height:100vh;background:#fff;}
+      .card{border:2px solid #E5E7EB;border-radius:14px;padding:28px;text-align:center;max-width:280px;}
+      .logo{font-family:sans-serif;font-size:1rem;font-weight:800;color:#2563EB;margin-bottom:4px;}
+      .name{font-size:1.1rem;font-weight:700;margin:12px 0 4px;}
+      .phone{font-size:0.875rem;color:#6B7280;margin-bottom:4px;}
+      .area{font-size:0.8rem;color:#9CA3AF;margin-bottom:12px;}
+      .hint{font-size:0.72rem;color:#9CA3AF;margin-top:12px;line-height:1.5;}
+    </style></head>
+    <body><div class="card">
+      <div class="logo">ChukaConnect</div>
+      <div style="font-size:0.72rem;color:#9CA3AF">Boda Boda Rider</div>
+      <img src="${qrCanvas.toDataURL()}" width="180" height="180" style="margin:12px auto;display:block">
+      <div class="name">${name}</div>
+      <div class="phone">📱 ${phone}</div>
+      <div class="area">📍 ${area}</div>
+      <div class="hint">Scan to pay via M-Pesa</div>
+    </div></body></html>`);
+  w.document.close();
+  setTimeout(() => w.print(), 500);
+}
+
+function downloadQR() {
+  const qrCanvas = document.querySelector('#qrcode canvas');
+  if (!qrCanvas) { toast('⚠️','Generate first','Click "Generate My QR Code" first.',true); return; }
+  const a = document.createElement('a');
+  a.download = 'chukaconnect-rider-qr.png';
+  a.href = qrCanvas.toDataURL('image/png');
+  a.click();
+  toast('⬇️', 'Downloaded', 'QR code saved to your device.');
+}
+
+async function shareQR() {
+  const name = document.getElementById('qr-name').value || 'Rider';
+  if (navigator.share) {
+    try {
+      await navigator.share({ title: `Pay ${name} on ChukaConnect`, text: `Scan this QR code to pay ${name} via M-Pesa on ChukaConnect` });
+    } catch(e) {}
+  } else {
+    toast('📤', 'Share', 'Download the QR code and share it on WhatsApp.');
+  }
+}
+
+// ── TRANSACTION LOG ──
+const transactions = [];
+function addTransaction(type, title, sub, amount) {
+  transactions.unshift({ type, title, sub, amount: Number(amount), date: new Date() });
+  renderTransactions();
+}
+
+function renderTransactions() {
+  const container = document.getElementById('recent-txns');
+  if (!transactions.length) {
+    container.innerHTML = '<div style="text-align:center;padding:20px;color:var(--gray-400);font-size:0.85rem">No recent payments yet</div>';
+    return;
+  }
+  container.innerHTML = transactions.slice(0,5).map(t => `
+    <div class="txn-item">
+      <div class="txn-icon ${t.type}">${t.type==='credit'?'✅':'💳'}</div>
+      <div class="txn-info">
+        <div class="txn-title">${t.title}</div>
+        <div class="txn-sub">${t.sub} · ${t.date.toLocaleTimeString('en-KE',{hour:'2-digit',minute:'2-digit'})}</div>
+      </div>
+      <div class="txn-amount ${t.type}">${t.type==='credit'?'+':'-'}KSh ${t.amount.toLocaleString()}</div>
+    </div>`).join('');
+}
+
+// ── HELPERS ──
+const delay = ms => new Promise(r => setTimeout(r, ms));
+
+// Init
+updatePaymentDesc();
+</script>
+</body>
+</html>
