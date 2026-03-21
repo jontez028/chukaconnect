@@ -328,36 +328,102 @@ select.field-input { appearance:none; cursor:pointer; background-image:url("data
 .alert-info { background:var(--blue-light); color:#1E40AF; border-color:var(--blue); }
 .alert-warn { background:var(--amber-bg); color:#92400E; border-color:var(--amber); }
 
+/* ══════════════════════════════════════
+   BOTTOM NAV BAR (mobile only)
+══════════════════════════════════════ */
+.bottom-nav {
+  display:none;
+  position:fixed; bottom:0; left:0; right:0; z-index:200;
+  background:var(--white); border-top:1px solid var(--gray-200);
+  padding:6px 0 max(6px, env(safe-area-inset-bottom));
+  box-shadow:0 -2px 12px rgba(0,0,0,0.07);
+}
+.bnav-items { display:flex; justify-content:space-around; align-items:center; }
+.bnav-btn {
+  display:flex; flex-direction:column; align-items:center; gap:3px;
+  padding:6px 12px; border:none; background:none; cursor:pointer;
+  font-family:inherit; color:var(--gray-400); min-width:56px;
+  transition:color 150ms; -webkit-tap-highlight-color:transparent;
+}
+.bnav-btn.active { color:var(--blue); }
+.bnav-btn .bn-icon { font-size:1.35rem; line-height:1; }
+.bnav-btn .bn-label { font-size:0.6rem; font-weight:600; text-transform:uppercase; letter-spacing:0.04em; }
+.bnav-more-menu {
+  display:none; position:fixed; bottom:68px; left:0; right:0; z-index:199;
+  background:var(--white); border-top:1px solid var(--gray-200);
+  box-shadow:0 -4px 20px rgba(0,0,0,0.1);
+  padding:12px 16px; border-radius:20px 20px 0 0;
+  max-height:60vh; overflow-y:auto;
+}
+.bnav-more-menu.open { display:block; }
+.more-overlay { display:none; position:fixed; inset:0; z-index:198; }
+.more-overlay.open { display:block; }
+.more-item {
+  display:flex; align-items:center; gap:14px;
+  padding:13px 12px; border-radius:var(--r-md); cursor:pointer;
+  font-size:0.9rem; font-weight:500; color:var(--gray-700);
+  border:none; background:none; width:100%; text-align:left;
+  -webkit-tap-highlight-color:transparent; transition:background 120ms;
+}
+.more-item:hover, .more-item:active { background:var(--gray-100); }
+.more-item .mi { font-size:1.25rem; width:24px; text-align:center; }
+
+/* Mobile top bar */
+.mobile-topbar {
+  display:none; position:fixed; top:0; left:0; right:0; z-index:150;
+  background:var(--white); border-bottom:1px solid var(--gray-200);
+  padding:0 16px; height:52px;
+  align-items:center; justify-content:space-between;
+  box-shadow:var(--shadow-sm);
+}
+.mobile-topbar .mtb-logo { font-family:'Manrope',sans-serif; font-size:1rem; font-weight:800; color:var(--blue); }
+.mobile-topbar .mtb-logo span { color:var(--gray-900); }
+.mobile-topbar .mtb-user { display:flex; align-items:center; gap:8px; }
+.mobile-topbar .mtb-avatar { width:30px; height:30px; border-radius:50%; background:var(--blue); color:var(--white); font-size:0.8rem; font-weight:700; display:flex; align-items:center; justify-content:center; }
+
 /* ── RESPONSIVE ──────────────────────── */
 @media(max-width:900px) {
-  /* Auth page - mobile: full screen, no split */
-  #page-auth.active { display:block; }
+  /* Auth — full screen, centered */
+  #page-auth.active { display:block; background:var(--white); }
   .auth-right { display:none; }
   .auth-left {
-    max-width:100%; width:100%;
-    min-height:100vh;
-    padding:40px 24px 32px;
-    justify-content:flex-start;
+    max-width:100%; width:100%; min-height:100vh;
+    padding:48px 24px 40px;
+    justify-content:center;
   }
-  /* Dashboard - mobile sidebar hidden */
-  .sidebar { transform:translateX(-100%); }
-  .sidebar.open { transform:translateX(0); box-shadow:var(--shadow-lg); }
-  .sb-overlay.open { display:block; }
-  .sb-toggle { display:flex; }
-  .main { margin-left:0; padding:16px; padding-top:58px; }
+
+  /* Dashboard — no sidebar, use bottom nav */
+  .sidebar { display:none !important; }
+  .sb-toggle { display:none !important; }
+  .sb-overlay { display:none !important; }
+  .main { margin-left:0; padding:16px; padding-top:64px; padding-bottom:80px; min-height:100vh; }
+  .bottom-nav { display:block; }
+  .mobile-topbar { display:flex; }
+
+  /* Content adjustments */
   .field-row { grid-template-columns:1fr; }
-  .stats-grid { grid-template-columns:1fr 1fr; }
-  .panel-header h1 { font-size:1.2rem; }
-  .listings-grid { grid-template-columns:1fr 1fr; gap:12px; }
+  .stats-grid { grid-template-columns:1fr 1fr; gap:10px; }
+  .panel-header { margin-bottom:18px; }
+  .panel-header h1 { font-size:1.25rem; }
+  .listings-grid { grid-template-columns:1fr 1fr; gap:10px; }
+  .card { padding:14px; }
+  .stat-tile { padding:14px; }
+  .stat-tile .n { font-size:1.5rem; }
 }
-@media(max-width:520px) {
-  .listings-grid { grid-template-columns:1fr; }
-  .stats-grid { grid-template-columns:1fr 1fr; }
-  .auth-left { padding:32px 20px 28px; }
-  .auth-brand { font-size:1.3rem; margin-bottom:24px; }
-  .lcard-img { height:130px; }
-  .main { padding:12px; padding-top:55px; }
-  .sb-logo { padding:16px 14px; }
+
+@media(max-width:480px) {
+  .auth-left { padding:40px 20px 32px; }
+  .auth-brand { margin-bottom:20px; }
+  .listings-grid { grid-template-columns:1fr; gap:10px; }
+  .stats-grid { grid-template-columns:1fr 1fr; gap:8px; }
+  .main { padding:12px; padding-top:60px; padding-bottom:76px; }
+  .lcard-img { height:140px; }
+  .lcard-body { padding:10px; }
+  .lcard-name { font-size:0.875rem; }
+  .panel-header h1 { font-size:1.1rem; }
+  .alert { font-size:0.8125rem; padding:10px 12px; }
+  .field-input { padding:9px 11px; font-size:0.875rem; }
+  .btn-full { padding:12px; font-size:0.9rem; }
 }
 </style>
 </head>
@@ -436,9 +502,17 @@ select.field-input { appearance:none; cursor:pointer; background-image:url("data
      DASHBOARD
 ════════════════════════════════════════ -->
 <div id="page-dashboard" class="page">
-  <button class="sb-toggle" onclick="toggleSb()">☰</button>
-  <div class="sb-overlay" id="sbOverlay" onclick="toggleSb()"></div>
 
+  <!-- MOBILE TOP BAR -->
+  <div class="mobile-topbar">
+    <div class="mtb-logo">Chuka<span>Connect</span></div>
+    <div class="mtb-user">
+      <span id="mtbName" style="font-size:0.8rem;font-weight:600;color:var(--gray-600);margin-right:8px"></span>
+      <div class="mtb-avatar" id="mtbAvatar">U</div>
+    </div>
+  </div>
+
+  <!-- DESKTOP SIDEBAR -->
   <div class="sidebar" id="sidebar">
     <div class="sb-logo">Chuka<span>Connect</span></div>
     <div class="sb-nav" id="sbNav"></div>
@@ -451,6 +525,15 @@ select.field-input { appearance:none; cursor:pointer; background-image:url("data
       <button class="btn btn-ghost btn-sm" onclick="doLogout()" title="Sign out" style="padding:6px;font-size:1rem;color:var(--gray-400)">→</button>
     </div>
   </div>
+
+  <!-- MOBILE BOTTOM NAV -->
+  <div class="bottom-nav">
+    <div class="bnav-items" id="bnavItems"></div>
+  </div>
+
+  <!-- MORE MENU -->
+  <div class="more-overlay" id="moreOverlay" onclick="closeMore()"></div>
+  <div class="bnav-more-menu" id="moreMenu"></div>
 
   <main class="main" id="dashMain"></main>
 </div>
@@ -483,6 +566,13 @@ const CATS = {
 // ── UTILS ──────────────────────────────
 const $  = id => document.getElementById(id);
 const esc = s  => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+
+function openWhatsApp(phone) {
+  let p = String(phone).replace(/\D/g,'');
+  if (p.startsWith('0'))   p = '254' + p.slice(1);
+  if (!p.startsWith('254')) p = '254' + p;
+  window.open('https://wa.me/' + p, '_blank');
+}
 const ge  = (tag,cls,html) => { const el=document.createElement(tag); if(cls)el.className=cls; if(html)el.innerHTML=html; return el; };
 
 function showPage(name) {
@@ -572,6 +662,58 @@ function toggleSb() {
   $('sbOverlay').classList.toggle('open');
 }
 
+function closeMore() {
+  $('moreMenu').classList.remove('open');
+  $('moreOverlay').classList.remove('open');
+}
+
+function toggleMore() {
+  $('moreMenu').classList.toggle('open');
+  $('moreOverlay').classList.toggle('open');
+}
+
+// Build bottom nav per role
+function buildBottomNav(items, moreItems) {
+  // items: [{icon, label, panel, fn}] - max 4 shown, rest go to More
+  const visible = items.slice(0, 4);
+  const hasMore = moreItems && moreItems.length > 0;
+
+  $('bnavItems').innerHTML = visible.map((item, i) => `
+    <button class="bnav-btn${i===0?' active':''}" id="bnav-${item.panel}"
+      onclick="bnavGo('${item.panel}',this${item.fn?',()=>{'+item.fn+'}':''})">
+      <span class="bn-icon">${item.icon}</span>
+      <span class="bn-label">${item.label}</span>
+    </button>`).join('') + (hasMore ? `
+    <button class="bnav-btn" onclick="toggleMore()">
+      <span class="bn-icon">☰</span>
+      <span class="bn-label">More</span>
+    </button>` : '');
+
+  if (hasMore) {
+    $('moreMenu').innerHTML = `
+      <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--gray-400);padding:4px 12px 10px">More Options</div>
+      ${moreItems.map(item => `
+        <button class="more-item" onclick="closeMore();bnavGo('${item.panel}',null${item.fn?',()=>{'+item.fn+'}':''})">
+          <span class="mi">${item.icon}</span> ${item.label}
+        </button>`).join('')}
+      <button class="more-item" onclick="closeMore();doLogout()" style="color:var(--red);margin-top:4px;border-top:1px solid var(--gray-100);padding-top:14px">
+        <span class="mi">🚪</span> Sign out
+      </button>`;
+  }
+}
+
+function bnavGo(panelId, btn, fn) {
+  showPanel(panelId, null);
+  // Update bottom nav active state
+  document.querySelectorAll('.bnav-btn').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  else {
+    const nb = $('bnav-' + panelId);
+    if (nb) nb.classList.add('active');
+  }
+  if (fn) fn();
+}
+
 // ── ROUTING ────────────────────────────
 function route(role) {
   const u = window.CU;
@@ -580,6 +722,8 @@ function route(role) {
   const name = u.name || u.email.split('@')[0];
   $('sbName').textContent   = name;
   $('sbAvatar').textContent = name[0].toUpperCase();
+  if($('mtbAvatar')) $('mtbAvatar').textContent = name[0].toUpperCase();
+  if($('mtbName'))   $('mtbName').textContent   = name.split(' ')[0];
   const roleLabels = { student:'Student', business:'Business Owner', rider:'Boda Rider', admin:'Admin' };
   $('sbRole').textContent   = roleLabels[r] || r;
   const builders = { student: buildStudent, business: buildBusiness, rider: buildRider, admin: buildAdmin };
@@ -747,6 +891,18 @@ function buildStudent() {
       </div>
     </div>`;
 
+  // Mobile bottom nav
+  buildBottomNav([
+    { icon:'🏠', label:'Home',    panel:'s-home',    fn:'' },
+    { icon:'🏠', label:'Hostels', panel:'s-hostels', fn:"sLoad('hostel','s-h-grid')" },
+    { icon:'🍽️', label:'Food',    panel:'s-food',    fn:"sLoad('food','s-f-grid')" },
+    { icon:'🗂️', label:'Browse',  panel:'s-browse',  fn:"sLoad('all','s-all-grid')" },
+  ],[
+    { icon:'💊', label:'Chemists', panel:'s-chemist', fn:"sLoad('chemist','s-c-grid')" },
+    { icon:'🏍️', label:'Boda Boda',panel:'s-boda',   fn:"sLoad('boda','s-b-grid')" },
+    { icon:'🛍️', label:'Shops',   panel:'s-shops',   fn:"sLoad('shop','s-s-grid')" },
+    { icon:'👤', label:'Profile',  panel:'s-profile', fn:'' },
+  ]);
   loadStudentStats();
   sLoad('all', 's-home-grid');
 }
@@ -810,7 +966,7 @@ function studentCard(l) {
       ${tags ? `<div class="lcard-tags">${tags}</div>` : ''}
       ${l.price ? `<div class="lcard-price">KSh ${esc(String(l.price))}<span style="font-size:0.72rem;font-weight:400;color:var(--gray-400)">/mo</span></div>` : ''}
       ${l.delivery ? `<div style="font-size:0.75rem;color:var(--green);margin-top:4px;font-weight:500">Delivery available</div>` : ''}
-      ${l.phone ? `<div class="lcard-actions"><a href="tel:${esc(l.phone)}" class="btn btn-primary btn-sm" style="width:100%;justify-content:center">Call ${esc(l.phone)}</a></div>` : ''}
+      ${l.phone ? `<div class="lcard-actions"><button class="btn btn-primary btn-sm" style="width:100%;justify-content:center" onclick="openWhatsApp('${esc(l.phone)}')">💬 WhatsApp ${esc(l.phone)}</button></div>` : ''}
     </div>
   </div>`;
 }
@@ -821,9 +977,14 @@ function studentCard(l) {
 function buildBusiness() {
   $('sbNav').innerHTML = `
     <button class="nav-btn active" onclick="showPanel('b-home',this)"><span class="ni">📊</span>Overview</button>
-    <p class="sb-section">Listings</p>
+    <p class="sb-section">My Business</p>
     <button class="nav-btn" onclick="showPanel('b-mine',this);loadMyListings()"><span class="ni">📋</span>My listings</button>
     <button class="nav-btn" onclick="showPanel('b-add',this)"><span class="ni">＋</span>Add listing</button>
+    <p class="sb-section">Browse</p>
+    <button class="nav-btn" onclick="showPanel('b-browse',this);bBrowse('all','b-browse-grid')"><span class="ni">🗂️</span>All Services</button>
+    <button class="nav-btn" onclick="showPanel('b-hostels',this);bBrowse('hostel','b-h-grid')"><span class="ni">🏠</span>Hostels</button>
+    <button class="nav-btn" onclick="showPanel('b-food',this);bBrowse('food','b-f-grid')"><span class="ni">🍽️</span>Food</button>
+    <button class="nav-btn" onclick="showPanel('b-boda',this);bBrowse('boda','b-boda-grid')"><span class="ni">🏍️</span>Boda Boda</button>
     <p class="sb-section">Account</p>
     <button class="nav-btn" onclick="showPanel('b-profile',this)"><span class="ni">👤</span>Profile</button>`;
 
@@ -925,9 +1086,46 @@ function buildBusiness() {
         <div class="field"><label class="field-label">Phone</label><input class="field-input" value="${esc(u.phone||'Not set')}" disabled></div>
         <button class="btn btn-danger btn-sm" onclick="doLogout()">Sign out</button>
       </div>
-    </div>`;
+    </div>
 
+    <div id="b-browse" class="panel"><div class="panel-header"><h1>All Services</h1></div><div class="listings-grid" id="b-browse-grid">${skelGrid(4)}</div></div>
+    <div id="b-hostels" class="panel"><div class="panel-header"><h1>Hostels</h1></div><div class="listings-grid" id="b-h-grid">${skelGrid(4)}</div></div>
+    <div id="b-food" class="panel"><div class="panel-header"><h1>Food & Restaurants</h1></div><div class="listings-grid" id="b-f-grid">${skelGrid(4)}</div></div>
+    <div id="b-boda" class="panel"><div class="panel-header"><h1>Boda Boda Riders</h1></div><div class="listings-grid" id="b-boda-grid">${skelGrid(4)}</div></div>`;
+
+  buildBottomNav([
+    { icon:'📊', label:'Overview', panel:'b-home',     fn:'' },
+    { icon:'📋', label:'Listings', panel:'b-mine',     fn:'loadMyListings()' },
+    { icon:'➕', label:'Add',      panel:'b-add',      fn:'' },
+    { icon:'🗂️', label:'Browse',   panel:'b-browse',   fn:"bBrowse('all','b-browse-grid')" },
+    { icon:'👤', label:'Profile',  panel:'b-profile',  fn:'' },
+  ],[]);
   loadBizStats();
+}
+
+// Business browse function
+async function bBrowse(cat, gridId) {
+  const grid = $(gridId); if (!grid) return;
+  grid.innerHTML = skelGrid(4);
+  try {
+    const { collection, getDocs, query, where, orderBy } = window._fb;
+    const db = window._db;
+    let q;
+    if (cat === 'all') {
+      q = query(collection(db,'listings'), where('status','==','approved'), orderBy('createdAt','desc'));
+    } else {
+      q = query(collection(db,'listings'), where('status','==','approved'), where('category','==',cat));
+    }
+    const snap  = await getDocs(q);
+    const items = snap.docs.map(d => ({ id:d.id,...d.data() }));
+    if (!items.length) {
+      grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="icon">${CATS[cat]?.icon||'📭'}</div><p>No listings here yet.</p></div>`;
+      return;
+    }
+    grid.innerHTML = items.map(l => studentCard(l)).join('');
+  } catch(e) {
+    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><p>Error: ${esc(e.message)}</p></div>`;
+  }
 }
 
 function toggleHostelExtras() {
@@ -1039,22 +1237,53 @@ async function delListing(id) {
 // ════════════════════════════════════════
 function buildRider() {
   $('sbNav').innerHTML = `
-    <button class="nav-btn active" onclick="showPanel('r-home',this)"><span class="ni">🏠</span>Overview</button>
-    <p class="sb-section">Work</p>
-    <button class="nav-btn" onclick="showPanel('r-profile',this)"><span class="ni">🏍️</span>Rider profile</button>
-    <button class="nav-btn" onclick="showPanel('r-biz',this);loadRiderBiz()"><span class="ni">🏪</span>Delivery businesses</button>
+    <button class="nav-btn active" onclick="showPanel('r-home',this)"><span class="ni">🏠</span>Home</button>
+    <p class="sb-section">Browse</p>
+    <button class="nav-btn" onclick="showPanel('r-all',this);rLoad('all','r-all-grid')"><span class="ni">🗂️</span>All Services</button>
+    <button class="nav-btn" onclick="showPanel('r-hostels',this);rLoad('hostel','r-h-grid')"><span class="ni">🏠</span>Hostels</button>
+    <button class="nav-btn" onclick="showPanel('r-food',this);rLoad('food','r-f-grid')"><span class="ni">🍽️</span>Food</button>
+    <button class="nav-btn" onclick="showPanel('r-chemist',this);rLoad('chemist','r-c-grid')"><span class="ni">💊</span>Chemists</button>
+    <button class="nav-btn" onclick="showPanel('r-shops',this);rLoad('shop','r-s-grid')"><span class="ni">🛍️</span>Shops</button>
+    <p class="sb-section">My Work</p>
+    <button class="nav-btn" onclick="showPanel('r-profile',this)"><span class="ni">🏍️</span>Rider Profile</button>
+    <button class="nav-btn" onclick="showPanel('r-biz',this);loadRiderBiz()"><span class="ni">🏪</span>Delivery Jobs</button>
     <p class="sb-section">Account</p>
     <button class="nav-btn" onclick="showPanel('r-acct',this)"><span class="ni">👤</span>Account</button>`;
 
   const u = window.CU;
   $('dashMain').innerHTML = `
     <div id="r-home" class="panel active">
-      <div class="panel-header"><h1>Rider Dashboard</h1><p>Welcome, ${esc(u.name?.split(' ')[0]||'')}. Set up your profile to start receiving jobs.</p></div>
-      <div class="alert alert-info">
-        Complete your rider profile so students and businesses can find and contact you. Your profile goes live after admin approval.
+      <div class="panel-header"><h1>Good day, ${esc(u.name?.split(' ')[0]||'Rider')}</h1><p>Browse services, find delivery jobs, and manage your rider profile.</p></div>
+      <div class="stats-grid">
+        <div class="stat-tile blue"><div class="n" id="rs-all">—</div><div class="l">Active listings</div></div>
+        <div class="stat-tile green"><div class="n" id="rs-biz">—</div><div class="l">Delivery businesses</div></div>
+        <div class="stat-tile amber"><div class="n" id="rs-food">—</div><div class="l">Food places</div></div>
+        <div class="stat-tile"><div class="n" id="rs-host">—</div><div class="l">Hostels</div></div>
       </div>
-      <button class="btn btn-primary" onclick="showPanel('r-profile',null)">Set up rider profile</button>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px;margin-bottom:24px">
+        ${[['🏠','Hostels','r-hostels',"rLoad('hostel','r-h-grid')"],['🍽️','Food','r-food',"rLoad('food','r-f-grid')"],
+           ['💊','Chemist','r-chemist',"rLoad('chemist','r-c-grid')"],['🛍️','Shops','r-shops',"rLoad('shop','r-s-grid')"],
+           ['🏪','Jobs','r-biz','loadRiderBiz()'],['🏍️','My Profile','r-profile','']]
+          .map(([ic,lb,pn,fn]) => `
+            <div class="card" style="text-align:center;cursor:pointer;padding:16px 8px;border-radius:10px" onclick="showPanel('${pn}',null);${fn}">
+              <div style="font-size:1.6rem;margin-bottom:6px">${ic}</div>
+              <div style="font-size:0.8rem;font-weight:600;color:var(--gray-700)">${lb}</div>
+            </div>`).join('')}
+      </div>
+      <div class="alert alert-info" style="margin-bottom:16px">
+        Complete your rider profile so students and businesses can find and contact you.
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <button class="btn btn-primary" onclick="showPanel('r-profile',null)">Set up rider profile</button>
+        <button class="btn btn-secondary" onclick="showPanel('r-biz',null);loadRiderBiz()">View delivery jobs</button>
+      </div>
     </div>
+
+    <div id="r-all" class="panel"><div class="panel-header"><h1>All Services</h1></div><div class="listings-grid" id="r-all-grid">${skelGrid(4)}</div></div>
+    <div id="r-hostels" class="panel"><div class="panel-header"><h1>Hostels</h1></div><div class="listings-grid" id="r-h-grid">${skelGrid(4)}</div></div>
+    <div id="r-food" class="panel"><div class="panel-header"><h1>Food & Restaurants</h1></div><div class="listings-grid" id="r-f-grid">${skelGrid(4)}</div></div>
+    <div id="r-chemist" class="panel"><div class="panel-header"><h1>Chemists & Pharmacies</h1></div><div class="listings-grid" id="r-c-grid">${skelGrid(4)}</div></div>
+    <div id="r-shops" class="panel"><div class="panel-header"><h1>Shops & Retail</h1></div><div class="listings-grid" id="r-s-grid">${skelGrid(4)}</div></div>
 
     <div id="r-profile" class="panel">
       <div class="panel-header"><h1>Rider Profile</h1><p>This will be visible to students and businesses once approved.</p></div>
@@ -1095,11 +1324,26 @@ function buildRider() {
     <div id="r-acct" class="panel">
       <div class="panel-header"><h1>Account</h1></div>
       <div class="card" style="max-width:420px">
-        <div style="font-weight:700;font-size:1rem;margin-bottom:4px">${esc(u.name||'')}</div>
-        <div style="font-size:0.8rem;color:var(--gray-500);margin-bottom:16px">${esc(u.email||'')}</div>
+        <div style="display:flex;align-items:center;gap:14px;margin-bottom:20px;padding-bottom:20px;border-bottom:1px solid var(--gray-100)">
+          <div style="width:48px;height:48px;border-radius:50%;background:var(--blue);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1.1rem">${esc((u.name||'R')[0].toUpperCase())}</div>
+          <div><div style="font-weight:700;color:var(--gray-900)">${esc(u.name||'')}</div><div style="font-size:0.8rem;color:var(--gray-500)">Boda Rider · ${esc(u.email||'')}</div></div>
+        </div>
+        <div class="field"><label class="field-label">Phone</label><input class="field-input" value="${esc(u.phone||'Not set')}" disabled></div>
         <button class="btn btn-danger btn-sm" onclick="doLogout()">Sign out</button>
       </div>
     </div>`;
+  loadRiderStats();
+  rLoad('all','r-all-grid');
+}
+
+// Bottom nav helper for rider (unused - kept for reference)
+function _initRiderBottomNav() {
+  buildBottomNav([
+    { icon:'🏠', label:'Home',     panel:'r-home',    fn:'' },
+    { icon:'🏍️', label:'Profile',  panel:'r-profile', fn:'' },
+    { icon:'🏪', label:'Jobs',     panel:'r-biz',     fn:'loadRiderBiz()' },
+    { icon:'👤', label:'Account',  panel:'r-acct',    fn:'' },
+  ],[]);
 }
 
 async function saveRiderProfile() {
@@ -1146,6 +1390,48 @@ async function loadRiderBiz() {
     if (!items.length) { grid.innerHTML=`<div class="empty-state" style="grid-column:1/-1"><div class="icon">🏪</div><p>No delivery businesses yet.</p></div>`; return; }
     grid.innerHTML = items.map(l => studentCard(l)).join('');
   } catch(e) { grid.innerHTML=`<div class="empty-state" style="grid-column:1/-1"><p>${esc(e.message)}</p></div>`; }
+}
+
+// Rider browse - same as student browse
+async function rLoad(cat, gridId) {
+  const grid = $(gridId); if (!grid) return;
+  grid.innerHTML = skelGrid(4);
+  try {
+    const { collection, getDocs, query, where, orderBy } = window._fb;
+    const db = window._db;
+    let q;
+    if (cat === 'all') {
+      q = query(collection(db,'listings'), where('status','==','approved'), orderBy('createdAt','desc'));
+    } else {
+      q = query(collection(db,'listings'), where('status','==','approved'), where('category','==',cat));
+    }
+    const snap  = await getDocs(q);
+    const items = snap.docs.map(d => ({ id:d.id,...d.data() }));
+    if (!items.length) {
+      grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="icon">${CATS[cat]?.icon||'📭'}</div><p>No listings here yet.</p></div>`;
+      return;
+    }
+    grid.innerHTML = items.map(l => studentCard(l)).join('');
+  } catch(e) {
+    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><p>Error: ${esc(e.message)}</p></div>`;
+  }
+}
+
+async function loadRiderStats() {
+  try {
+    const { collection, getDocs, query, where } = window._fb;
+    const db = window._db;
+    const [a,biz,f,h] = await Promise.all([
+      getDocs(query(collection(db,'listings'), where('status','==','approved'))),
+      getDocs(query(collection(db,'listings'), where('status','==','approved'), where('delivery','==',true))),
+      getDocs(query(collection(db,'listings'), where('status','==','approved'), where('category','==','food'))),
+      getDocs(query(collection(db,'listings'), where('status','==','approved'), where('category','==','hostel'))),
+    ]);
+    if($('rs-all'))  $('rs-all').textContent  = a.size;
+    if($('rs-biz'))  $('rs-biz').textContent  = biz.size;
+    if($('rs-food')) $('rs-food').textContent = f.size;
+    if($('rs-host')) $('rs-host').textContent = h.size;
+  } catch(e) {}
 }
 
 // ════════════════════════════════════════
@@ -1197,6 +1483,13 @@ function buildAdmin() {
       </div>
     </div>`;
 
+  // Mobile bottom nav
+  buildBottomNav([
+    { icon:'📊', label:'Overview', panel:'a-home',    fn:'' },
+    { icon:'⏳', label:'Pending',  panel:'a-pending', fn:'loadPending()' },
+    { icon:'📋', label:'All',      panel:'a-all',     fn:'loadAllListings()' },
+    { icon:'👥', label:'Users',    panel:'a-users',   fn:'loadUsers()' },
+  ],[]);
   loadAdminStats();
   loadPending();
 }
