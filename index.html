@@ -909,45 +909,67 @@ function buildStudent() {
 
 async function loadStudentStats() {
   try {
-    const { collection, getDocs, query, where } = window._fb;
-    const db = window._db;
-    const [a,h,f,b] = await Promise.all([
-      getDocs(query(collection(db,'listings'), where('status','==','approved'))),
-      getDocs(query(collection(db,'listings'), where('status','==','approved'), where('category','==','hostel'), orderBy('createdAt','desc'))),
-      getDocs(query(collection(db,'listings'), where('status','==','approved'), where('category','==','food'))),
-      getDocs(query(collection(db,'listings'), where('status','==','approved'), where('category','==','boda'))),
-    ]);
-    if($('ss-all'))  $('ss-all').textContent  = a.size;
-    if($('ss-host')) $('ss-host').textContent = h.size;
-    if($('ss-food')) $('ss-food').textContent = f.size;
-    if($('ss-boda')) $('ss-boda').textContent = b.size;
+    const items = await fetchApprovedListings();
+    if($('ss-all'))  $('ss-all').textContent  = items.length;
+    if($('ss-host')) $('ss-host').textContent = items.filter(l=>l.category==='hostel').length;
+    if($('ss-food')) $('ss-food').textContent = items.filter(l=>l.category==='food').length;
+    if($('ss-boda')) $('ss-boda').textContent = items.filter(l=>l.category==='boda').length;
   } catch(e) {}
 }
 
-async function sLoad(cat, gridId) {
+
+// ── UNIVERSAL LISTING LOADER ──────────────────
+// Fetches ALL approved listings once, filters in JS
+// This avoids ALL composite index requirements
+let _listingsCache = null;
+let _cacheTime = 0;
+
+async function fetchApprovedListings() {
+  // Cache for 60 seconds to avoid repeated reads
+  if (_listingsCache && Date.now() - _cacheTime < 60000) {
+    return _listingsCache;
+  }
+  const { collection, getDocs, query, where } = window._fb;
+  const snap = await getDocs(
+    query(collection(window._db,'listings'), where('status','==','approved'))
+  );
+  _listingsCache = snap.docs.map(d => ({ id:d.id, ...d.data() }));
+  _cacheTime = Date.now();
+  return _listingsCache;
+}
+
+async function loadListings(cat, gridId) {
   const grid = $(gridId); if (!grid) return;
   grid.innerHTML = skelGrid(4);
   try {
-    const { collection, getDocs, query, where, orderBy } = window._fb;
-    const db = window._db;
-    let q;
-    if (cat === 'all') {
-      q = query(collection(db,'listings'), where('status','==','approved'), orderBy('createdAt','desc'));
+    let items = await fetchApprovedListings();
+    // Filter by category in JavaScript — no index needed
+    if (cat !== 'all') {
+      items = items.filter(l => l.category === cat);
     } else {
-      // Simple single-field query - no composite index needed
-      q = query(collection(db,'listings'), where('category','==',cat), where('status','==','approved'));
+      // For 'all', exclude hostels (they have their own section)
+      items = items.filter(l => l.category !== 'hostel');
     }
-    const snap  = await getDocs(q);
-    const items = snap.docs.map(d => ({ id:d.id, ...d.data() }));
+    // Sort by newest first (client-side)
+    items.sort((a,b) => {
+      const ta = a.createdAt?.seconds || 0;
+      const tb = b.createdAt?.seconds || 0;
+      return tb - ta;
+    });
     if (!items.length) {
       grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="icon">${CATS[cat]?.icon||'📭'}</div><p>No listings in this category yet.</p></div>`;
       return;
     }
     grid.innerHTML = items.map(l => studentCard(l)).join('');
   } catch(e) {
-    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><p>Could not load listings. ${esc(e.message)}</p></div>`;
+    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><p>Could not load listings.<br><small>${esc(e.message)}</small></p></div>`;
   }
 }
+
+// Aliases so all existing calls work
+const sLoad    = (cat, gridId) => loadListings(cat, gridId);
+const bBrowse  = (cat, gridId) => loadListings(cat === 'all' ? 'all' : cat, gridId);
+const rLoad    = (cat, gridId) => loadListings(cat, gridId);
 
 function studentCard(l) {
   const c = CATS[l.category] || CATS.other;
@@ -1104,29 +1126,6 @@ function buildBusiness() {
 }
 
 // Business browse function
-async function bBrowse(cat, gridId) {
-  const grid = $(gridId); if (!grid) return;
-  grid.innerHTML = skelGrid(4);
-  try {
-    const { collection, getDocs, query, where, orderBy } = window._fb;
-    const db = window._db;
-    let q;
-    if (cat === 'all') {
-      q = query(collection(db,'listings'), where('status','==','approved'), orderBy('createdAt','desc'));
-    } else {
-      q = query(collection(db,'listings'), where('status','==','approved'), where('category','==',cat));
-    }
-    const snap  = await getDocs(q);
-    const items = snap.docs.map(d => ({ id:d.id,...d.data() }));
-    if (!items.length) {
-      grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="icon">${CATS[cat]?.icon||'📭'}</div><p>No listings here yet.</p></div>`;
-      return;
-    }
-    grid.innerHTML = items.map(l => studentCard(l)).join('');
-  } catch(e) {
-    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><p>Error: ${esc(e.message)}</p></div>`;
-  }
-}
 
 function toggleHostelExtras() {
   $('hostelExtras').style.display = $('al_cat').value === 'hostel' ? 'block' : 'none';
@@ -1383,54 +1382,21 @@ async function loadRiderBiz() {
   const grid = $('r-biz-grid'); if (!grid) return;
   grid.innerHTML = skelGrid(3);
   try {
-    const { collection, getDocs, query, where, orderBy } = window._fb;
-    const q = query(collection(window._db,'listings'), where('status','==','approved'), where('delivery','==',true));
-    const snap  = await getDocs(q);
-    const items = snap.docs.map(d => ({ id:d.id,...d.data() }));
+    const all   = await fetchApprovedListings();
+    const items = all.filter(l => l.delivery === true);
     if (!items.length) { grid.innerHTML=`<div class="empty-state" style="grid-column:1/-1"><div class="icon">🏪</div><p>No delivery businesses yet.</p></div>`; return; }
     grid.innerHTML = items.map(l => studentCard(l)).join('');
   } catch(e) { grid.innerHTML=`<div class="empty-state" style="grid-column:1/-1"><p>${esc(e.message)}</p></div>`; }
 }
 
-// Rider browse - same as student browse
-async function rLoad(cat, gridId) {
-  const grid = $(gridId); if (!grid) return;
-  grid.innerHTML = skelGrid(4);
-  try {
-    const { collection, getDocs, query, where, orderBy } = window._fb;
-    const db = window._db;
-    let q;
-    if (cat === 'all') {
-      q = query(collection(db,'listings'), where('status','==','approved'), orderBy('createdAt','desc'));
-    } else {
-      q = query(collection(db,'listings'), where('status','==','approved'), where('category','==',cat));
-    }
-    const snap  = await getDocs(q);
-    const items = snap.docs.map(d => ({ id:d.id,...d.data() }));
-    if (!items.length) {
-      grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="icon">${CATS[cat]?.icon||'📭'}</div><p>No listings here yet.</p></div>`;
-      return;
-    }
-    grid.innerHTML = items.map(l => studentCard(l)).join('');
-  } catch(e) {
-    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><p>Error: ${esc(e.message)}</p></div>`;
-  }
-}
 
 async function loadRiderStats() {
   try {
-    const { collection, getDocs, query, where } = window._fb;
-    const db = window._db;
-    const [a,biz,f,h] = await Promise.all([
-      getDocs(query(collection(db,'listings'), where('status','==','approved'))),
-      getDocs(query(collection(db,'listings'), where('status','==','approved'), where('delivery','==',true))),
-      getDocs(query(collection(db,'listings'), where('status','==','approved'), where('category','==','food'))),
-      getDocs(query(collection(db,'listings'), where('status','==','approved'), where('category','==','hostel'))),
-    ]);
-    if($('rs-all'))  $('rs-all').textContent  = a.size;
-    if($('rs-biz'))  $('rs-biz').textContent  = biz.size;
-    if($('rs-food')) $('rs-food').textContent = f.size;
-    if($('rs-host')) $('rs-host').textContent = h.size;
+    const items = await fetchApprovedListings();
+    if($('rs-all'))  $('rs-all').textContent  = items.length;
+    if($('rs-biz'))  $('rs-biz').textContent  = items.filter(l=>l.delivery).length;
+    if($('rs-food')) $('rs-food').textContent = items.filter(l=>l.category==='food').length;
+    if($('rs-host')) $('rs-host').textContent = items.filter(l=>l.category==='hostel').length;
   } catch(e) {}
 }
 
@@ -1500,7 +1466,7 @@ async function loadAdminStats() {
     const db = window._db;
     const [al,ap,pn,us] = await Promise.all([
       getDocs(collection(db,'listings')),
-      getDocs(query(collection(db,'listings'),where('status','==','approved'))),
+      getDocs(query(collection(db,'listings'), where('status','==','approved'))),
       getDocs(query(collection(db,'listings'),where('status','==','pending'))),
       getDocs(collection(db,'users')),
     ]);
